@@ -1,0 +1,350 @@
+{
+  "classConfigs": [
+    {
+      "name": "com.tal.TestExample",
+      "methodConfigs": [
+        {
+          "name": "test",
+          "cases": [
+            {
+              "name": "case999",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "true"
+                },
+                {
+                  "name": "p1",
+                  "value": "1"
+                },
+                {
+                  "name": "p2",
+                  "value": "2"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": {
+                    "name": "sj",
+                    "age": 30
+                  }
+                }
+              ]
+            },
+            {
+              "name": "case0",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "false"
+                },
+                {
+                  "name": "p1",
+                  "value": "1"
+                },
+                {
+                  "name": "p2",
+                  "value": "2"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": "8"
+                }
+              ]
+            },
+            {
+              "name": "case1",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "true"
+                },
+                {
+                  "name": "p1",
+                  "value": "3"
+                },
+                {
+                  "name": "p2",
+                  "value": "2"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": "8"
+                }
+              ]
+            },
+            {
+              "name": "case2",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "true"
+                },
+                {
+                  "name": "p1",
+                  "value": "1"
+                },
+                {
+                  "name": "p2",
+                  "value": "234"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": "8"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "staticTest",
+          "cases": [
+            {
+              "name": "caseaaa",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "true"
+                },
+                {
+                  "name": "p1",
+                  "value": "1"
+                },
+                {
+                  "name": "p2",
+                  "value": "2"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": "8"
+                }
+              ]
+            },
+            {
+              "name": "casea",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "false"
+                },
+                {
+                  "name": "p1",
+                  "value": "1"
+                },
+                {
+                  "name": "p2",
+                  "value": "2"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": "8"
+                }
+              ]
+            },
+            {
+              "name": "caseb",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "true"
+                },
+                {
+                  "name": "p1",
+                  "value": "3"
+                },
+                {
+                  "name": "p2",
+                  "value": "2"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": "8"
+                }
+              ]
+            },
+            {
+              "name": "casec",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": "true"
+                },
+                {
+                  "name": "p1",
+                  "value": "1"
+                },
+                {
+                  "name": "p2",
+                  "value": "234"
+                },
+                {
+                  "name": "p3",
+                  "value": "3"
+                },
+                {
+                  "name": "p4",
+                  "value": "4"
+                },
+                {
+                  "name": "p5",
+                  "value": "5"
+                },
+                {
+                  "name": "p6",
+                  "value": "6"
+                },
+                {
+                  "name": "p7",
+                  "value": "7"
+                },
+                {
+                  "name": "p8",
+                  "value": "8"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
