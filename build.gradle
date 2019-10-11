@@ -23,6 +23,23 @@ repositories {
     jcenter()
 }
 
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'com.tal.ApplicationKt'
+    }
+    baseName = project.name + '-all'
+    from {
+        configurations.compile.collect {
+            println it
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    from { zipTree("/Users/jianshen/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-runtime/0.12.0/418a99564fcb3fa1b278b529238d2cb5a3f80d7d/kotlinx-serialization-runtime-0.12.0.jar") }
+    with jar
+}
+
 dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.8'
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")

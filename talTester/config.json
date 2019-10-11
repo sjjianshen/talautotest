@@ -45,131 +45,12 @@
                   "name": "p8",
                   "value": {
                     "name": "sj",
-                    "age": 30
+                    "age": 30,
+                    "address": {
+                      "country": "CN",
+                      "province": "beijing"
+                    }
                   }
-                }
-              ]
-            },
-            {
-              "name": "case0",
-              "params": [
-                {
-                  "name": "p0",
-                  "value": "false"
-                },
-                {
-                  "name": "p1",
-                  "value": "1"
-                },
-                {
-                  "name": "p2",
-                  "value": "2"
-                },
-                {
-                  "name": "p3",
-                  "value": "3"
-                },
-                {
-                  "name": "p4",
-                  "value": "4"
-                },
-                {
-                  "name": "p5",
-                  "value": "5"
-                },
-                {
-                  "name": "p6",
-                  "value": "6"
-                },
-                {
-                  "name": "p7",
-                  "value": "7"
-                },
-                {
-                  "name": "p8",
-                  "value": "8"
-                }
-              ]
-            },
-            {
-              "name": "case1",
-              "params": [
-                {
-                  "name": "p0",
-                  "value": "true"
-                },
-                {
-                  "name": "p1",
-                  "value": "3"
-                },
-                {
-                  "name": "p2",
-                  "value": "2"
-                },
-                {
-                  "name": "p3",
-                  "value": "3"
-                },
-                {
-                  "name": "p4",
-                  "value": "4"
-                },
-                {
-                  "name": "p5",
-                  "value": "5"
-                },
-                {
-                  "name": "p6",
-                  "value": "6"
-                },
-                {
-                  "name": "p7",
-                  "value": "7"
-                },
-                {
-                  "name": "p8",
-                  "value": "8"
-                }
-              ]
-            },
-            {
-              "name": "case2",
-              "params": [
-                {
-                  "name": "p0",
-                  "value": "true"
-                },
-                {
-                  "name": "p1",
-                  "value": "1"
-                },
-                {
-                  "name": "p2",
-                  "value": "234"
-                },
-                {
-                  "name": "p3",
-                  "value": "3"
-                },
-                {
-                  "name": "p4",
-                  "value": "4"
-                },
-                {
-                  "name": "p5",
-                  "value": "5"
-                },
-                {
-                  "name": "p6",
-                  "value": "6"
-                },
-                {
-                  "name": "p7",
-                  "value": "7"
-                },
-                {
-                  "name": "p8",
-                  "value": "8"
                 }
               ]
             }
@@ -179,7 +60,7 @@
           "name": "staticTest",
           "cases": [
             {
-              "name": "caseaaa",
+              "name": "case998",
               "params": [
                 {
                   "name": "p0",
@@ -215,130 +96,81 @@
                 },
                 {
                   "name": "p8",
-                  "value": "8"
+                  "value": {
+                    "name": "sj",
+                    "age": 30
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "com.tal.TestExampleForReturnObject",
+      "methodConfigs": [
+        {
+          "name": "test",
+          "cases": [
+            {
+              "name": "case999",
+              "params": [
+                {
+                  "name": "p8",
+                  "value": {
+                    "name": "sj",
+                    "age": 30,
+                    "address": {
+                      "country": "CN",
+                      "province": "beijing"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "staticTest",
+          "cases": [
+            {
+              "name": "case998",
+              "params": [
+                {
+                  "name": "p8",
+                  "value": {
+                    "name": "sj",
+                    "age": 30
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "com.tal.RoundUtils",
+      "methodConfigs": [
+        {
+          "name": "isEnglish",
+          "cases": [
+            {
+              "name": "shouldReturnTure",
+              "params": [
+                {
+                  "name": "charaString",
+                  "value": "asd"
                 }
               ]
             },
             {
-              "name": "casea",
+              "name": "shouldReturnFalse",
               "params": [
                 {
-                  "name": "p0",
-                  "value": "false"
-                },
-                {
-                  "name": "p1",
-                  "value": "1"
-                },
-                {
-                  "name": "p2",
-                  "value": "2"
-                },
-                {
-                  "name": "p3",
-                  "value": "3"
-                },
-                {
-                  "name": "p4",
-                  "value": "4"
-                },
-                {
-                  "name": "p5",
-                  "value": "5"
-                },
-                {
-                  "name": "p6",
-                  "value": "6"
-                },
-                {
-                  "name": "p7",
-                  "value": "7"
-                },
-                {
-                  "name": "p8",
-                  "value": "8"
-                }
-              ]
-            },
-            {
-              "name": "caseb",
-              "params": [
-                {
-                  "name": "p0",
-                  "value": "true"
-                },
-                {
-                  "name": "p1",
-                  "value": "3"
-                },
-                {
-                  "name": "p2",
-                  "value": "2"
-                },
-                {
-                  "name": "p3",
-                  "value": "3"
-                },
-                {
-                  "name": "p4",
-                  "value": "4"
-                },
-                {
-                  "name": "p5",
-                  "value": "5"
-                },
-                {
-                  "name": "p6",
-                  "value": "6"
-                },
-                {
-                  "name": "p7",
-                  "value": "7"
-                },
-                {
-                  "name": "p8",
-                  "value": "8"
-                }
-              ]
-            },
-            {
-              "name": "casec",
-              "params": [
-                {
-                  "name": "p0",
-                  "value": "true"
-                },
-                {
-                  "name": "p1",
-                  "value": "1"
-                },
-                {
-                  "name": "p2",
-                  "value": "234"
-                },
-                {
-                  "name": "p3",
-                  "value": "3"
-                },
-                {
-                  "name": "p4",
-                  "value": "4"
-                },
-                {
-                  "name": "p5",
-                  "value": "5"
-                },
-                {
-                  "name": "p6",
-                  "value": "6"
-                },
-                {
-                  "name": "p7",
-                  "value": "7"
-                },
-                {
-                  "name": "p8",
-                  "value": "8"
+                  "name": "charaString",
+                  "value": "不是英语"
                 }
               ]
             }

@@ -7,53 +7,18 @@ import org.junit.Test;
 public class TestExampleTest {
    @Test
    public void case999() {
-      TestExample var1 = new TestExample();
-      String var2 = var1.test(true, '1', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
+      TestExample var2 = new TestExample();
+      User var3 = new User();
+      var3.setName("sj");
+      String var4 = var2.test(true, '1', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, var3);
+      MatcherAssert.assertThat(var4, Is.is("1"));
+   }
+
+   @Test
+   public void case998() {
+      User var1 = new User();
+      var1.setName("sj");
+      String var2 = TestExample.staticTest(true, '1', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, var1);
       MatcherAssert.assertThat(var2, Is.is("1"));
-   }
-
-   @Test
-   public void case0() {
-      TestExample var1 = new TestExample();
-      String var2 = var1.test(false, '1', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
-      MatcherAssert.assertThat(var2, Is.is("-1"));
-   }
-
-   @Test
-   public void case1() {
-      TestExample var1 = new TestExample();
-      String var2 = var1.test(true, '3', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
-      MatcherAssert.assertThat(var2, Is.is("-1"));
-   }
-
-   @Test
-   public void case2() {
-      TestExample var1 = new TestExample();
-      String var2 = var1.test(true, '1', (short)234, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
-      MatcherAssert.assertThat(var2, Is.is("-1"));
-   }
-
-   @Test
-   public void caseaaa() {
-      String var1 = TestExample.staticTest(true, '1', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
-      MatcherAssert.assertThat(var1, Is.is("1"));
-   }
-
-   @Test
-   public void casea() {
-      String var1 = TestExample.staticTest(false, '1', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
-      MatcherAssert.assertThat(var1, Is.is("-11"));
-   }
-
-   @Test
-   public void caseb() {
-      String var1 = TestExample.staticTest(true, '3', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
-      MatcherAssert.assertThat(var1, Is.is("-11"));
-   }
-
-   @Test
-   public void casec() {
-      String var1 = TestExample.staticTest(true, '1', (short)234, 3, 4L, 5.0F, 6.0D, (byte)7, "8");
-      MatcherAssert.assertThat(var1, Is.is("-11"));
    }
 }

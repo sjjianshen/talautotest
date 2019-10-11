@@ -1,5 +1,7 @@
 package com.tal;
 
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.core.Is;
 import org.junit.Test;
 
 public class TestExample {
@@ -25,6 +27,8 @@ public class TestExample {
             return "2";
         }
 
+        boolean var1 = (boolean) RoundUtils.isEnglish("不是英语");
+        MatcherAssert.assertThat(Boolean.valueOf(var1), Is.is(false));
         return "0";
     }
 }
