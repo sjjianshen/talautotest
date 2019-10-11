@@ -1,4 +1,4 @@
-package com.tal;
+package com.tal.autotest.example;
 
 import org.junit.Test;
 

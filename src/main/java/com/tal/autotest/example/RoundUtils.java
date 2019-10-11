@@ -1,4 +1,4 @@
-package com.tal;
+package com.tal.autotest.example;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

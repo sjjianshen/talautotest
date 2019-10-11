@@ -10,6 +10,7 @@ buildscript {
 
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.3.50'
+    id 'groovy'
 }
 
 apply plugin: 'kotlin'
@@ -25,7 +26,7 @@ repositories {
 
 task fatJar(type: Jar) {
     manifest {
-        attributes 'Implementation-Title': 'Gradle Jar File Example',
+        attributes 'Implementation-Title': '工程实践组自动单测工具',
                 'Implementation-Version': version,
                 'Main-Class': 'com.tal.ApplicationKt'
     }
@@ -41,6 +42,8 @@ task fatJar(type: Jar) {
 }
 
 dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
     compileOnly 'org.projectlombok:lombok:1.18.8'
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     compile group: 'org.bitbucket.mstrobel', name: 'procyon-compilertools', version: '0.5.36'
@@ -50,7 +53,8 @@ dependencies {
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-reflect', version: '1.3.50'
     // https://mvnrepository.com/artifact/org.jboss.windup.decompiler/decompiler-fernflower
     compile group: 'org.jboss.windup.decompiler', name: 'decompiler-fernflower', version: '4.2.1.Final'
-
+    implementation gradleApi()
+    implementation localGroovy()
 }
 
 compileKotlin {

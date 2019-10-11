@@ -1,4 +1,4 @@
-package com.tal
+package com.tal.autotest.tool
 
 import kotlinx.serialization.json.Json
 import org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler
@@ -18,7 +18,8 @@ fun main(args: Array<String>) {
     val classFiles = Files.walk(Paths.get(classFilePath)).filter { t -> t.toString().endsWith(".class") }
     val outputPath = "$workspace/src/test/java"
     val outputClassPath = "$workspace/build/talTester/classes"
-    val targetClassLoader = DirectoryClassLoader(classFilePath, Thread.currentThread().contextClassLoader)
+    val targetClassLoader =
+        DirectoryClassLoader(classFilePath, Thread.currentThread().contextClassLoader)
     Thread.currentThread().contextClassLoader = targetClassLoader
     config.classConfigs.forEach {
         val ccf = it
@@ -46,7 +47,7 @@ fun main(args: Array<String>) {
                     val match = matchMethods!![0]
                     val caseName = cacf.name
                     if (!matchMethods.isNullOrEmpty()) {
-                        MethodGenerator(cw, caseName, clz,  match, configParams).generate()
+                        MethodGenerator(cw, caseName, clz, match, configParams).generate()
                     }
                 }
             }
