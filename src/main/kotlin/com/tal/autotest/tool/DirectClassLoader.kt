@@ -1,9 +1,12 @@
 package com.tal.autotest.tool
 
 import java.io.File
+import java.net.URL
+import java.net.URLClassLoader
 
-class DirectoryClassLoader (private val classpath: String, private val oldCl: ClassLoader) : ClassLoader(oldCl) {
-    private var cache: HashMap<String, Class<*>> = HashMap()
+class DirectoryClassLoader (private val classpath: String, urls : Array<URL>, private val oldCl: ClassLoader) : URLClassLoader(urls, oldCl) {
+    private var cache: HashMap<String, Class<*>?> = HashMap()
+    private val auxPaths = mutableListOf<File>()
     @Synchronized override fun loadClass(name: String?): Class<*>? {
         if (name.isNullOrBlank()) {
             return null
@@ -11,10 +14,18 @@ class DirectoryClassLoader (private val classpath: String, private val oldCl: Cl
         if (cache.containsKey(name)) {
             return cache[name]
         }
-        var res: Class<*>
+        var res: Class<*>? = null
         try {
             res = oldCl.loadClass(name)
         } catch (e : ClassNotFoundException) {
+        }
+        if (res == null) {
+            try {
+                res = super.loadClass(name)
+            } catch (e : Exception) {
+            }
+        }
+        if (res == null) {
             val data: ByteArray = loadClassData(name)
             res = defineClass(name, data, 0, data.size)
             resolveClass(res)
@@ -30,5 +41,9 @@ class DirectoryClassLoader (private val classpath: String, private val oldCl: Cl
 
     public fun loadClassDirect(name: String, byteArray: ByteArray): Class<*> {
         return defineClass(name, byteArray, 0, byteArray.size)
+    }
+
+    fun addAuxClassPath(path: String) {
+        auxPaths.add(File(path))
     }
 }

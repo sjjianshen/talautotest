@@ -1,7 +1,7 @@
 {
   "classConfigs": [
     {
-      "name": "com.tal.TestExample",
+      "name": "com.tal.autotest.example.TestExample",
       "methodConfigs": [
         {
           "name": "test",
@@ -108,7 +108,7 @@
       ]
     },
     {
-      "name": "com.tal.TestExampleForReturnObject",
+      "name": "com.tal.autotest.example.TestExampleForReturnObject",
       "methodConfigs": [
         {
           "name": "test",
@@ -151,7 +151,7 @@
       ]
     },
     {
-      "name": "com.tal.RoundUtils",
+      "name": "com.tal.autotest.example.RoundUtils",
       "methodConfigs": [
         {
           "name": "isEnglish",
