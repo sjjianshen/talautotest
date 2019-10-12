@@ -32,7 +32,7 @@ jar {
                 'Implementation-Version': version,
                 'Main-Class': 'com.tal.autotest.tool.ApplicationKt'
     }
-    baseName = project.name + '-all'
+    baseName = project.name
     from {
         configurations.compile.collect {
             it.isDirectory() ? it : zipTree(it)
