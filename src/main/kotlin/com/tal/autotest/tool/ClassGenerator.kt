@@ -2,8 +2,8 @@ package com.tal.autotest.tool
 
 import kotlinx.serialization.json.Json
 import org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Opcodes
+import org.objectweb.asm.*
+import org.objectweb.asm.Opcodes.ACC_PRIVATE
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
@@ -34,6 +34,20 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
                 val methods = clz?.methods
                 val cw = ClassWriter(0)
                 cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC + Opcodes.ACC_SUPER, slashedClassName, null, "java/lang/Object", null)
+                if (ccf.autowire) {
+                    var cav : AnnotationVisitor = cw.visitAnnotation("Lorg/junit/runner/RunWith;", true)
+                    cav.visit("value", Type.getType("Lorg/springframework/test/context/junit4/SpringRunner;"))
+                    cav.visitEnd()
+                    cav = cw.visitAnnotation("Lorg/springframework/test/context/ContextConfiguration;", true)
+                    val av1 = cav.visitArray("classes")
+                    av1.visit(null, Type.getType("L${ccf.appName.replace(".", "/")};"))
+                    av1.visitEnd()
+                    cav.visitEnd()
+                    val fv : FieldVisitor = cw.visitField(ACC_PRIVATE, "instance", "L${className};", null, null)
+                    val fav : AnnotationVisitor = fv.visitAnnotation("Lorg/springframework/beans/factory/annotation/Autowired;", true)
+                    fav.visitEnd()
+                    fv.visitEnd()
+                }
                 ccf.methodConfigs.forEach {
                     val mcf = it
                     val methodName = mcf.name
@@ -45,11 +59,23 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
                             val cacf = it
                             val configParams = cacf.params
                             val paramCount = configParams.size
-                            val matchMethods = suitableMethods?.filter { it.parameterCount == paramCount }
-                            val match = matchMethods!![0]
+                            val matchMethods = suitableMethods?.filter { it -> it.parameterCount == paramCount }
+                            val method = matchMethods!![0]
                             val caseName = cacf.name
                             if (!matchMethods.isNullOrEmpty()) {
-                                MethodGenerator(cw, caseName, clz, match, configParams).generate()
+                                val mv = cw.visitMethod(Opcodes.ACC_PUBLIC, caseName, "()V", null, null)
+                                val av = mv.visitAnnotation("Lorg/junit/Test;", true)
+                                av.visitEnd()
+                                mv.visitCode()
+                                if ((method.modifiers and Opcodes.ACC_STATIC) != 0) {
+                                    StaticMethodGenerator(mv, clz, method, configParams).generate()
+                                } else if (ccf.autowire) {
+                                    SpringBeanMethodGenerator(mv, clz, method, slashedClassName, ccf.appName, configParams)
+                                        .generate()
+                                } else {
+                                    NonStaticMethodGenerator(mv, clz, method, configParams).generate()
+                                }
+                                mv.visitEnd()
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()

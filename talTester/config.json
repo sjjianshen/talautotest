@@ -177,6 +177,31 @@
           ]
         }
       ]
+    },
+    {
+      "name": "com.tal.autotest.example.controller.ExampleController",
+      "autowire": true,
+      "appName": "com.tal.autotest.example.ExampleApp",
+      "methodConfigs": [
+        {
+          "name": "add",
+          "cases": [
+            {
+              "name": "testAdd",
+              "params": [
+                {
+                  "name": "input1",
+                  "value": "1"
+                },
+                {
+                  "name": "input1",
+                  "value": "3"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

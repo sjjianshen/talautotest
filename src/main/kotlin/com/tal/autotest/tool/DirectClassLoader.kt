@@ -7,8 +7,8 @@ import java.net.URLClassLoader
 class DirectoryClassLoader (private val classpath: String, urls : Array<URL>, private val oldCl: ClassLoader) : URLClassLoader(urls, oldCl) {
     private var cache: HashMap<String, Class<*>?> = HashMap()
     private val auxPaths = mutableListOf<File>()
-    @Synchronized override fun loadClass(name: String?): Class<*>? {
-        if (name.isNullOrBlank()) {
+    @Synchronized override fun loadClass(name: String): Class<*>? {
+        if (name.contains("TypeConstrainedMappingJackson2HttpMessageConverter") || name.isNullOrBlank()) {
             return null
         }
         if (cache.containsKey(name)) {
@@ -22,13 +22,18 @@ class DirectoryClassLoader (private val classpath: String, urls : Array<URL>, pr
         if (res == null) {
             try {
                 res = super.loadClass(name)
-            } catch (e : Exception) {
+            } catch (e : ClassNotFoundException) {
             }
         }
         if (res == null) {
-            val data: ByteArray = loadClassData(name)
-            res = defineClass(name, data, 0, data.size)
-            resolveClass(res)
+            try {
+                val data: ByteArray = loadClassData(name)
+                res = defineClass(name, data, 0, data.size)
+                resolveClass(res)
+            } catch (e : Exception) {
+                throw ClassNotFoundException()
+            }
+
         }
         cache[name] = res
         return res

@@ -7,86 +7,30 @@ import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.*
+import org.springframework.test.context.TestContextManager
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 
-class MethodGenerator(
-    private val cw: ClassVisitor,
-    private val caseName: String,
-    private val clz: Class<*>,
-    private val method: Method,
-    private val config: List<JsonObject>
-) {
-    private var varCounter = 0
-    fun generate() {
-        val mv = cw.visitMethod(Opcodes.ACC_PUBLIC, caseName, "()V", null, null)
-        val av = mv.visitAnnotation("Lorg/junit/Test;", true)
-        av.visitEnd()
-        mv.visitCode()
-        if ((method.modifiers and Opcodes.ACC_STATIC) != 0) {
-            createTestForStaticMethod(mv, clz.name, method, config)
-        } else {
-            varCounter++
-            createTestForNonStaticMethod(mv, clz.name, clz, method, config)
-        }
-    }
+abstract class MethodGenerator {
+    internal var varCounter = 0
+    abstract fun generate()
 
-    fun createTestForStaticMethod(
-        mv: MethodVisitor,
-        className: String?,
-        match: Method,
-        configParams: List<JsonObject>
-    ) {
-        val list = processParams(match, configParams)
-        addParamsByteCode(match, configParams, list, mv)
-        val ret = match.invoke(null, *list.toArray())
-        val methodDesc = processMethodDesc(match)
-        mv.visitMethodInsn(Opcodes.INVOKESTATIC, className?.replace('.', '/'), match.name, methodDesc, false)
-        if (match.returnType.isPrimitive) {
-            postProcessPrimitive(match.returnType, mv)
-        }
-        processVerifyByteCode(match, mv, ret)
-        mv.visitInsn(Opcodes.RETURN)
-        mv.visitMaxs(3, 3)
-        mv.visitEnd()
-    }
-
-    private fun createTestForNonStaticMethod(
-        mv: MethodVisitor,
-        className: String?,
-        clz: Class<*>,
-        match: Method,
-        configParams: List<JsonObject>
-    ) {
-        mv.visitTypeInsn(Opcodes.NEW, className?.replace('.', '/'))
-        mv.visitInsn(Opcodes.DUP)
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, className?.replace('.', '/'), "<init>", "()V", false)
-        varCounter++
-        mv.visitVarInsn(Opcodes.ASTORE, varCounter)
-        mv.visitVarInsn(Opcodes.ALOAD, varCounter)
-        val list = processParams(match, configParams)
-        addParamsByteCode(match, configParams, list, mv)
-        val methodDesc = processMethodDesc(match)
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, className?.replace('.', '/'), match.name, methodDesc, false)
-        val obj = clz.newInstance()
-        val ret = match.invoke(obj, *list.toArray())
-        if (match.returnType.isPrimitive) {
-            postProcessPrimitive(match.returnType, mv)
-        }
-        processVerifyByteCode(match, mv, ret)
-        mv.visitInsn(Opcodes.RETURN)
-        mv.visitMaxs(varCounter + 1, varCounter + 1)
-        mv.visitEnd()
-    }
-
-    private fun postProcessPrimitive(returnType: Class<*>, mv : MethodVisitor) {
+    fun postProcessPrimitive(returnType: Class<*>, mv: MethodVisitor) {
         when (returnType) {
-            Byte::class.javaPrimitiveType -> mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Byte", "valueOf", "(I)Ljava/lang/Byte;", false)
-            Int::class.javaPrimitiveType -> mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Integer", "valueOf",
-                "(I)Ljava/lang/Integer;", false)
+            Byte::class.javaPrimitiveType -> mv.visitMethodInsn(
+                INVOKESTATIC,
+                "java/lang/Byte",
+                "valueOf",
+                "(I)Ljava/lang/Byte;",
+                false
+            )
+            Int::class.javaPrimitiveType -> mv.visitMethodInsn(
+                INVOKESTATIC, "java/lang/Integer", "valueOf",
+                "(I)Ljava/lang/Integer;", false
+            )
             Short::class.javaPrimitiveType -> {
                 mv.visitMethodInsn(
-                    Opcodes.INVOKESTATIC,
+                    INVOKESTATIC,
                     "java/lang/Short",
                     "valueOf",
                     "(I)Ljava/lang/Short;",
@@ -95,19 +39,12 @@ class MethodGenerator(
             }
             Boolean::class.javaPrimitiveType -> {
                 mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
-//                mv.visitMethodInsn(
-//                    Opcodes.INVOKESTATIC,
-//                    "java/lang/Boolean",
-//                    "valueOf",
-//                    "(I)Ljava/lang/Boolean;",
-//                    false
-//                )
             }
             else -> null
         }
     }
 
-    private fun processParams(
+    fun processParams(
         match: Method,
         configParams: List<JsonObject>
     ): ArrayList<Any> {
@@ -169,7 +106,7 @@ class MethodGenerator(
                         } else {
                             setMethod.invoke(ins, processObject(given.jsonObject, it.type))
                         }
-                    } else if (it.modifiers and Opcodes.ACC_PUBLIC != 0) {
+                    } else if (it.modifiers and ACC_PUBLIC != 0) {
                         if (it.type.isPrimitive) {
                             it.set(ins, processPrimitive(given, it.type))
                         } else {
@@ -182,7 +119,12 @@ class MethodGenerator(
         return ins
     }
 
-    fun addParamsByteCode(match: Method, configParams: List<JsonObject>, list: java.util.ArrayList<Any>, mv: MethodVisitor) {
+    fun addParamsByteCode(
+        match: Method,
+        configParams: List<JsonObject>,
+        list: java.util.ArrayList<Any>,
+        mv: MethodVisitor
+    ) {
         if (match.parameterCount > 0) {
             match.parameters.forEachIndexed { index, parameter ->
                 if (parameter.type.isPrimitive) {
@@ -198,25 +140,25 @@ class MethodGenerator(
 
     fun processPrimitiveByteCode(type: Class<*>, value: Any, mv: MethodVisitor) {
         when (type) {
-            Byte::class.javaPrimitiveType -> mv.visitIntInsn(Opcodes.SIPUSH, (value as Byte).toInt())
-            Char::class.javaPrimitiveType -> mv.visitIntInsn(Opcodes.SIPUSH, (value as Char).toInt())
+            Byte::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Byte).toInt())
+            Char::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Char).toInt())
             Double::class.javaPrimitiveType -> mv.visitLdcInsn(value)
             Float::class.javaPrimitiveType -> mv.visitLdcInsn(value)
-            Int::class.javaPrimitiveType -> mv.visitIntInsn(Opcodes.SIPUSH, value as Int)
+            Int::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, value as Int)
             Long::class.javaPrimitiveType -> mv.visitLdcInsn(value)
-            Short::class.javaPrimitiveType -> mv.visitIntInsn(Opcodes.SIPUSH, (value as Short).toInt())
-            Boolean::class.javaPrimitiveType -> mv.visitInsn(if (value as Boolean) Opcodes.ICONST_1 else Opcodes.ICONST_0)
-            else -> mv.visitInsn(Opcodes.ACONST_NULL)
+            Short::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Short).toInt())
+            Boolean::class.javaPrimitiveType -> mv.visitInsn(if (value as Boolean) ICONST_1 else ICONST_0)
+            else -> mv.visitInsn(ACONST_NULL)
         }
     }
 
-    fun processObjectByteCode(type: Class<*>, config : JsonObject, ins: Any, mv: MethodVisitor) {
-        mv.visitTypeInsn(Opcodes.NEW, type.name.replace('.', '/'))
-        mv.visitInsn(Opcodes.DUP)
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, type.name.replace('.', '/'), "<init>", "()V", false)
+    fun processObjectByteCode(type: Class<*>, config: JsonObject, ins: Any, mv: MethodVisitor) {
+        mv.visitTypeInsn(NEW, type.name.replace('.', '/'))
+        mv.visitInsn(DUP)
+        mv.visitMethodInsn(INVOKESPECIAL, type.name.replace('.', '/'), "<init>", "()V", false)
         varCounter++
-        val oldCounter = varCounter;
-        mv.visitVarInsn(Opcodes.ASTORE, varCounter)
+        val oldCounter = varCounter
+        mv.visitVarInsn(ASTORE, varCounter)
         val methods = type.methods
         type.declaredFields.forEach {
             it.setAccessible(true)
@@ -225,7 +167,7 @@ class MethodGenerator(
                 val setMethodName = "set${name}"
                 val setMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
                 if (setMethod != null) {
-                    mv.visitVarInsn(Opcodes.ALOAD, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
                     if (it.type.isPrimitive) {
                         processPrimitiveByteCode(it.type, it.get(ins), mv)
                     } else if (it.type == String::class.java) {
@@ -237,11 +179,11 @@ class MethodGenerator(
                         }
                     }
                     mv.visitMethodInsn(
-                        Opcodes.INVOKESPECIAL, type.name.replace('.', '/'), setMethod.name,
+                        INVOKESPECIAL, type.name.replace('.', '/'), setMethod.name,
                         processMethodDesc(setMethod), false
                     )
-                } else if (it.modifiers and Opcodes.ACC_PUBLIC != 0) {
-                    mv.visitVarInsn(Opcodes.ALOAD, varCounter)
+                } else if (it.modifiers and ACC_PUBLIC != 0) {
+                    mv.visitVarInsn(ALOAD, varCounter)
                     if (it.type.isPrimitive) {
                         processPrimitiveByteCode(it.type, it.get(ins), mv)
                     } else if (it.type == String::class.java) {
@@ -253,11 +195,11 @@ class MethodGenerator(
                         }
 //                        processObjectByteCode(it.type, it.get(ins), mv)
                     }
-                    mv.visitFieldInsn(Opcodes.PUTFIELD, type.name.replace('.', '/'), it.name, mapTypeToDesc(it.type))
+                    mv.visitFieldInsn(PUTFIELD, type.name.replace('.', '/'), it.name, mapTypeToDesc(it.type))
                 }
             }
         }
-        mv.visitVarInsn(Opcodes.ALOAD, oldCounter)
+        mv.visitVarInsn(ALOAD, oldCounter)
     }
 
     fun processStringByteCode(value: Any?, mv: MethodVisitor) {
@@ -278,18 +220,18 @@ class MethodGenerator(
         }
     }
 
-    private fun processVerifyByteCode(match: Method, mv: MethodVisitor, ret: Any?) {
+    fun processVerifyByteCode(match: Method, mv: MethodVisitor, ret: Any?) {
         varCounter++
-        mv.visitIntInsn(Opcodes.ISTORE, varCounter)
-        mv.visitVarInsn(Opcodes.ILOAD, varCounter)
+        mv.visitIntInsn(ISTORE, varCounter)
+        mv.visitVarInsn(ILOAD, varCounter)
         if (match.returnType.isPrimitive) {
             when (match.returnType) {
                 Byte::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(Opcodes.SIPUSH, ret as Int)
-                    mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Byte", "valueOf", "(I)Ljava/lang/Byte;", false)
+                    mv.visitIntInsn(SIPUSH, ret as Int)
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Byte", "valueOf", "(I)Ljava/lang/Byte;", false)
                 }
                 Char::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(Opcodes.SIPUSH, ret as Int)
+                    mv.visitIntInsn(SIPUSH, ret as Int)
                 }
                 Double::class.javaPrimitiveType -> {
                     mv.visitLdcInsn(ret)
@@ -298,9 +240,9 @@ class MethodGenerator(
                     mv.visitLdcInsn(ret)
                 }
                 Int::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(Opcodes.SIPUSH, ret as Int)
+                    mv.visitIntInsn(SIPUSH, ret as Int)
                     mv.visitMethodInsn(
-                        Opcodes.INVOKESTATIC,
+                        INVOKESTATIC,
                         "java/lang/Integer",
                         "valueOf",
                         "(I)Ljava/lang/Integer;",
@@ -311,9 +253,9 @@ class MethodGenerator(
                     mv.visitLdcInsn(ret)
                 }
                 Short::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(Opcodes.SIPUSH, ret as Int)
+                    mv.visitIntInsn(SIPUSH, ret as Int)
                     mv.visitMethodInsn(
-                        Opcodes.INVOKESTATIC,
+                        INVOKESTATIC,
                         "java/lang/Short",
                         "valueOf",
                         "(I)Ljava/lang/Short;",
@@ -327,25 +269,18 @@ class MethodGenerator(
                         mv.visitInsn(ICONST_0)
                     }
                     mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
-//                    mv.visitMethodInsn(
-//                        Opcodes.INVOKESTATIC,
-//                        "java/lang/Boolean",
-//                        "valueOf",
-//                        "(I)Ljava/lang/Boolean;",
-//                        false
-//                    )
                 }
                 else -> null
             }
             mv.visitMethodInsn(
-                Opcodes.INVOKESTATIC,
+                INVOKESTATIC,
                 "org/hamcrest/core/Is",
                 "is",
                 "(Ljava/lang/Object;)Lorg/hamcrest/Matcher;",
                 false
             )
             mv.visitMethodInsn(
-                Opcodes.INVOKESTATIC,
+                INVOKESTATIC,
                 "org/hamcrest/MatcherAssert",
                 "assertThat",
                 "(Ljava/lang/Object;Lorg/hamcrest/Matcher;)V",
@@ -354,21 +289,21 @@ class MethodGenerator(
         } else if (match.returnType == String::class.java) {
             mv.visitLdcInsn(ret)
             mv.visitMethodInsn(
-                Opcodes.INVOKESTATIC,
+                INVOKESTATIC,
                 "org/hamcrest/core/Is",
                 "is",
                 "(Ljava/lang/Object;)Lorg/hamcrest/Matcher;",
                 false
             )
             mv.visitMethodInsn(
-                Opcodes.INVOKESTATIC,
+                INVOKESTATIC,
                 "org/hamcrest/MatcherAssert",
                 "assertThat",
                 "(Ljava/lang/Object;Lorg/hamcrest/Matcher;)V",
                 false
             )
         } else {
-            veryfyObject(method.returnType, mv, ret)
+            veryfyObject(match.returnType, mv, ret)
         }
     }
 
@@ -386,18 +321,18 @@ class MethodGenerator(
             if (value != null) {
                 if (getMethod != null) {
                     if (it.type.isPrimitive or (it.type == String::class.java)) {
-                        mv.visitVarInsn(Opcodes.ALOAD, varCounter)
+                        mv.visitVarInsn(ALOAD, varCounter)
                         mv.visitMethodInsn(
-                            Opcodes.INVOKESPECIAL, type.name.replace('.', '/'), getMethod.name,
+                            INVOKESPECIAL, type.name.replace('.', '/'), getMethod.name,
                             processMethodDesc(getMethod), false
                         )
                         verifyField(it, value, mv)
                     }
-                } else if (it.modifiers and Opcodes.ACC_PUBLIC != 0) {
+                } else if (it.modifiers and ACC_PUBLIC != 0) {
                     if (it.type.isPrimitive or (it.type == String::class.java)) {
-                        mv.visitVarInsn(Opcodes.ALOAD, varCounter)
+                        mv.visitVarInsn(ALOAD, varCounter)
                         mv.visitFieldInsn(
-                            Opcodes.GETFIELD,
+                            GETFIELD,
                             type.name.replace('.', '/'),
                             it.name,
                             mapTypeToDesc(it.type)
@@ -416,14 +351,14 @@ class MethodGenerator(
             processStringByteCode(value, mv)
         }
         mv.visitMethodInsn(
-            Opcodes.INVOKESTATIC,
+            INVOKESTATIC,
             "org/hamcrest/core/Is",
             "is",
             "(Ljava/lang/Object;)Lorg/hamcrest/Matcher;",
             false
         )
         mv.visitMethodInsn(
-            Opcodes.INVOKESTATIC,
+            INVOKESTATIC,
             "org/hamcrest/MatcherAssert",
             "assertThat",
             "(Ljava/lang/Object;Lorg/hamcrest/Matcher;)V",
