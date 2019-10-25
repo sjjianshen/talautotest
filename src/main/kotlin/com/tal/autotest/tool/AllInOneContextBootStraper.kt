@@ -17,10 +17,9 @@ class AllInOneContextBootStraper(private val declaredClz: Class<*>, private val 
     }
 
     override fun buildTestContext(): TestContext {
-        var delegate: CacheAwareContextLoaderDelegate? = null
         var clazz = ClassUtils.forName(DEFAULT_CACHE_AWARE_CONTEXT_LOADER_DELEGATE_CLASS_NAME, Thread.currentThread()
                 .contextClassLoader)
-        delegate = BeanUtils.instantiateClass(clazz, CacheAwareContextLoaderDelegate::class.java)
+        var delegate: CacheAwareContextLoaderDelegate = BeanUtils.instantiateClass(clazz, CacheAwareContextLoaderDelegate::class.java)
         val bootStrapContext = DefaultBootstrapContext(declaredClz, delegate)
         this.bootstrapContext = bootStrapContext
         val defaultTestContext = DefaultTestContext(

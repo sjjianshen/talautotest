@@ -13,10 +13,7 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
     public fun launch() {
         val configPath = "$workspace/talTester/config.json"
         val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
-        val javaFilePath = "$workspace/src/main/java"
-        val javaFiles = Files.walk(Paths.get(javaFilePath)).filter { t -> t.toString().endsWith(".java") }
         val classFilePath = "$workspace/build/classes/java/main"
-        val classFiles = Files.walk(Paths.get(classFilePath)).filter { t -> t.toString().endsWith(".class") }
         val outputPath = "$workspace/src/test/java"
         val outputClassPath = "$workspace/build/talTester/classes"
         val targetClassLoader =
@@ -48,15 +45,15 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
                     fav.visitEnd()
                     fv.visitEnd()
                 }
-                ccf.methodConfigs.forEach {
-                    val mcf = it
+                ccf.methodConfigs.forEach { methodConfig ->
+                    val mcf = methodConfig
                     val methodName = mcf.name
-                    val suitableMethods = methods?.filter {
-                        it.name == methodName
+                    val suitableMethods = methods?.filter { method ->
+                        method.name == methodName
                     }
-                    mcf.cases.forEach {
+                    mcf.cases.forEach { case ->
                         try {
-                            val cacf = it
+                            val cacf = case
                             val configParams = cacf.params
                             val paramCount = configParams.size
                             val matchMethods = suitableMethods?.filter { it -> it.parameterCount == paramCount }
