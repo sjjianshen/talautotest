@@ -8,7 +8,7 @@ class DirectoryClassLoader (private val classpath: String, urls : Array<URL>, pr
     private var cache: HashMap<String, Class<*>?> = HashMap()
     private val auxPaths = mutableListOf<File>()
     @Synchronized override fun loadClass(name: String): Class<*>? {
-        if (name.contains("TypeConstrainedMappingJackson2HttpMessageConverter") || name.isNullOrBlank()) {
+        if (name.isNullOrBlank()) {
             return null
         }
         if (cache.containsKey(name)) {
