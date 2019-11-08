@@ -31,6 +31,7 @@ class SpringBeanMethodGenerator(
         val methodDesc = processMethodDesc(method)
         mv.visitMethodInsn(INVOKEVIRTUAL, slashedClzName, method.name, methodDesc, false)
         val obj = clz.newInstance()
+        System.out.println("autowire instance")
         context.prepareTestInstance(obj)
         val ret = method.invoke(obj, *list.toArray())
         if (method.returnType.isPrimitive) {

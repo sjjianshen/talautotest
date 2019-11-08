@@ -1,0 +1,37 @@
+{
+  "classConfigs": [
+    {
+      "name": "com.tal.autotest.example.ExampleListGenerator",
+      "methodConfigs": [
+        {
+          "name": "generateA",
+          "cases": [
+            {
+              "name": "case4",
+              "params": [
+                {
+                  "name": "p8",
+                  "value": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "generate",
+          "cases": [
+            {
+              "name": "case3",
+              "params": [
+                {
+                  "name": "p8",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

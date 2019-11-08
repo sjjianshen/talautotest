@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.ACC_PRIVATE
+import org.springframework.cglib.core.DebuggingClassWriter
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
@@ -11,13 +12,14 @@ import java.nio.file.Paths
 
 class ClassGenerator(val workspace: String, val urls: Array<URL>) {
     public fun launch() {
-        val configPath = "$workspace/talTester/config.json"
+        val configPath = "$workspace/talTester/config1.json"
         val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
-        val classFilePath = "$workspace/build/classes/java/main"
+        System.setProperty(DebuggingClassWriter.DEBUG_LOCATION_PROPERTY, "/Users/jianshen/workspace/innovation-backend/class")
+        System.getProperties().put("sun.misc.ProxyGenerator.saveGeneratedFiles", "true")
         val outputPath = "$workspace/src/test/java"
         val outputClassPath = "$workspace/build/talTester/classes"
         val targetClassLoader =
-            DirectoryClassLoader(classFilePath, urls, Thread.currentThread().contextClassLoader)
+            DirectoryClassLoader(workspace, urls, Thread.currentThread().contextClassLoader)
         Thread.currentThread().contextClassLoader = targetClassLoader
         config.classConfigs.forEach {
             val ccf = it
@@ -36,8 +38,14 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
                     cav.visit("value", Type.getType("Lorg/springframework/test/context/junit4/SpringRunner;"))
                     cav.visitEnd()
                     cav = cw.visitAnnotation("Lorg/springframework/test/context/ContextConfiguration;", true)
-                    val av1 = cav.visitArray("classes")
+                    var av1 = cav.visitArray("classes")
                     av1.visit(null, Type.getType("L${ccf.appName.replace(".", "/")};"))
+                    av1.visitEnd()
+                    av1 = cav.visitArray("initializers")
+                    av1.visit(
+                        null,
+                        Type.getType("Lorg/springframework/boot/test/context/ConfigFileApplicationContextInitializer;")
+                    )
                     av1.visitEnd()
                     cav.visitEnd()
                     val fv : FieldVisitor = cw.visitField(ACC_PRIVATE, "instance", "L${className};", null, null)

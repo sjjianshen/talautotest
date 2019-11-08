@@ -7,7 +7,7 @@
           "name": "test",
           "cases": [
             {
-              "name": "case999",
+              "name": "case1",
               "params": [
                 {
                   "name": "p0",
@@ -60,7 +60,7 @@
           "name": "staticTest",
           "cases": [
             {
-              "name": "case998",
+              "name": "case2",
               "params": [
                 {
                   "name": "p0",
@@ -114,7 +114,7 @@
           "name": "test",
           "cases": [
             {
-              "name": "case999",
+              "name": "case3",
               "params": [
                 {
                   "name": "p8",
@@ -135,7 +135,7 @@
           "name": "staticTest",
           "cases": [
             {
-              "name": "case998",
+              "name": "case4",
               "params": [
                 {
                   "name": "p8",

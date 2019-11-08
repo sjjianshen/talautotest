@@ -3,117 +3,61 @@ package com.tal.autotest.tool
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.content
-import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.*
-import org.springframework.test.context.TestContextManager
-import java.lang.reflect.Field
 import java.lang.reflect.Method
 
 abstract class MethodGenerator {
     internal var varCounter = 0
     abstract fun generate()
 
-    fun postProcessPrimitive(returnType: Class<*>, mv: MethodVisitor) {
-        when (returnType) {
-            Byte::class.javaPrimitiveType -> mv.visitMethodInsn(
-                INVOKESTATIC,
-                "java/lang/Byte",
-                "valueOf",
-                "(I)Ljava/lang/Byte;",
-                false
-            )
-            Int::class.javaPrimitiveType -> mv.visitMethodInsn(
-                INVOKESTATIC, "java/lang/Integer", "valueOf",
-                "(I)Ljava/lang/Integer;", false
-            )
-            Short::class.javaPrimitiveType -> {
-                mv.visitMethodInsn(
-                    INVOKESTATIC,
-                    "java/lang/Short",
-                    "valueOf",
-                    "(I)Ljava/lang/Short;",
-                    false
-                )
-            }
-            Boolean::class.javaPrimitiveType -> {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
-            }
-            else -> null
-        }
-    }
-
     fun processParams(
         match: Method,
         configParams: List<JsonObject>
-    ): ArrayList<Any> {
-        val list = ArrayList<Any>()
-        if (match.parameterCount > 0) {
-            match.parameters.forEachIndexed { index, it ->
-                val given = configParams.get(index).get("value")
-                if (it.type.isPrimitive) {
-                    val value: Any = processPrimitive(given, it.type)
-                    list.add(value)
-                } else if (it.type == String::class.java) {
-                    val value: Any = given?.content as Any
-                    list.add(value)
-                } else {
-                    val value = processObject(given?.jsonObject, it.type)
-                    list.add(value)
-                }
+    ): ArrayList<Any?> {
+        val list = ArrayList<Any?>()
+        match.parameters.forEachIndexed { index, it ->
+            val given = configParams.get(index).get("value")
+            if (isBasicType(it.type)) {
+                val value: Any = processPrimitive(given, it.type)
+                list.add(value)
+            } else {
+                val value = processObject(given?.jsonObject, it.type)
+                list.add(value)
             }
         }
         return list
     }
 
-    private fun processPrimitive(
-        given: JsonElement?,
-        type: Class<*>
-    ): Any {
-        val givenContent = given?.content
-        return when (type) {
-            Byte::class.javaPrimitiveType -> givenContent?.toByte()
-            Char::class.javaPrimitiveType -> givenContent?.toCharArray()?.first()
-            Double::class.javaPrimitiveType -> givenContent?.toDouble()
-            Float::class.javaPrimitiveType -> givenContent?.toFloat()
-            Int::class.javaPrimitiveType -> givenContent?.toInt()
-            Long::class.javaPrimitiveType -> givenContent?.toLong()
-            Short::class.javaPrimitiveType -> givenContent?.toShort()
-            Boolean::class.javaPrimitiveType -> givenContent?.toBoolean()
-            else -> null
-        } as Any
-    }
-
     private fun processObject(
         params: JsonObject?,
         type: Class<*>
-    ): Any {
+    ): Any? {
+        if (params == null) {
+            return null
+        }
         val ins = type.newInstance()
         val methods = type.methods
-        if (params != null) {
-            type.declaredFields.forEach {
-                val name = it.name
-                val setMethodName = "set${name}"
-                val setMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
-                val given = params[name]
-                if (given != null) {
-                    if (setMethod != null) {
-                        if (it.type.isPrimitive) {
-                            setMethod.invoke(ins, processPrimitive(given, it.type))
-                        } else if (it.type == String::class.java) {
-                            setMethod.invoke(ins, given.content)
-                        } else {
-                            setMethod.invoke(ins, processObject(given.jsonObject, it.type))
-                        }
-                    } else if (it.modifiers and ACC_PUBLIC != 0) {
-                        if (it.type.isPrimitive) {
-                            it.set(ins, processPrimitive(given, it.type))
-                        } else {
-                            it.set(ins, processObject(given.jsonObject, it.type))
-                        }
-                    }
-                }
+        type.declaredFields.forEach {
+            val name = it.name
+            val given = params[name] ?: return@forEach
+            val setMethodName = "set${name}"
+            val setMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
+            if (setMethod != null) {
+                setMethod.invoke(
+                    ins,
+                    if (isBasicType(it.type)) processPrimitive(given, it.type) else processObject(
+                        given.jsonObject,
+                        it.type
+                    )
+                )
+            } else if (it.modifiers and ACC_PUBLIC != 0) {
+                it.set(
+                    ins, if (isBasicType(it.type)) processPrimitive(given, it.type) else processObject(
+                        given.jsonObject,
+                        it.type
+                    )
+                )
             }
         }
         return ins
@@ -122,37 +66,22 @@ abstract class MethodGenerator {
     fun addParamsByteCode(
         match: Method,
         configParams: List<JsonObject>,
-        list: java.util.ArrayList<Any>,
+        list: java.util.ArrayList<Any?>,
         mv: MethodVisitor
     ) {
-        if (match.parameterCount > 0) {
-            match.parameters.forEachIndexed { index, parameter ->
-                if (parameter.type.isPrimitive) {
-                    processPrimitiveByteCode(parameter.type, list.get(index), mv)
-                } else if (parameter.type == String::class.java) {
-                    processStringByteCode(list.get(index), mv)
-                } else {
-                    processObjectByteCode(parameter.type, configParams.get(index), list.get(index), mv)
-                }
+        match.parameters.forEachIndexed { index, parameter ->
+            if (isBasicType(parameter.type)) {
+                addBasicByteCode(parameter.type, list.get(index), mv)
+            } else {
+                addObjectParamByteCode(parameter.type, configParams.get(index), list.get(index), mv)
             }
         }
     }
 
-    fun processPrimitiveByteCode(type: Class<*>, value: Any, mv: MethodVisitor) {
-        when (type) {
-            Byte::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Byte).toInt())
-            Char::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Char).toInt())
-            Double::class.javaPrimitiveType -> mv.visitLdcInsn(value)
-            Float::class.javaPrimitiveType -> mv.visitLdcInsn(value)
-            Int::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, value as Int)
-            Long::class.javaPrimitiveType -> mv.visitLdcInsn(value)
-            Short::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Short).toInt())
-            Boolean::class.javaPrimitiveType -> mv.visitInsn(if (value as Boolean) ICONST_1 else ICONST_0)
-            else -> mv.visitInsn(ACONST_NULL)
+    fun addObjectParamByteCode(type: Class<*>, config: JsonObject, ins: Any?, mv: MethodVisitor) {
+        if(ins == null) {
+            return
         }
-    }
-
-    fun processObjectByteCode(type: Class<*>, config: JsonObject, ins: Any, mv: MethodVisitor) {
         mv.visitTypeInsn(NEW, type.name.replace('.', '/'))
         mv.visitInsn(DUP)
         mv.visitMethodInsn(INVOKESPECIAL, type.name.replace('.', '/'), "<init>", "()V", false)
@@ -162,51 +91,112 @@ abstract class MethodGenerator {
         val methods = type.methods
         type.declaredFields.forEach {
             it.setAccessible(true)
-            if (!isDefault(it.type, it.get(ins)) and (config[it.name] != null)) {
-                val name = it.name
-                val setMethodName = "set${name}"
-                val setMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
-                if (setMethod != null) {
-                    mv.visitVarInsn(ALOAD, varCounter)
-                    if (it.type.isPrimitive) {
-                        processPrimitiveByteCode(it.type, it.get(ins), mv)
-                    } else if (it.type == String::class.java) {
-                        processStringByteCode(it.get(ins), mv)
-                    } else {
-                        val fieldConfig = config[name]
-                        if (fieldConfig != null) {
-                            processObjectByteCode(it.type, fieldConfig.jsonObject, it.get(ins), mv)
-                        }
-                    }
-                    mv.visitMethodInsn(
-                        INVOKESPECIAL, type.name.replace('.', '/'), setMethod.name,
-                        processMethodDesc(setMethod), false
-                    )
-                } else if (it.modifiers and ACC_PUBLIC != 0) {
-                    mv.visitVarInsn(ALOAD, varCounter)
-                    if (it.type.isPrimitive) {
-                        processPrimitiveByteCode(it.type, it.get(ins), mv)
-                    } else if (it.type == String::class.java) {
-                        processStringByteCode(it.get(ins), mv)
-                    } else {
-                        val fieldConfig = config[name]
-                        if (fieldConfig != null) {
-                            processObjectByteCode(it.type, fieldConfig.jsonObject, it.get(ins), mv)
-                        }
-//                        processObjectByteCode(it.type, it.get(ins), mv)
-                    }
-                    mv.visitFieldInsn(PUTFIELD, type.name.replace('.', '/'), it.name, mapTypeToDesc(it.type))
+            val paramName = it.name
+            val ele = config[paramName]
+            if (isDefault(it.type, it.get(ins))) {
+                return@forEach
+            }
+            val setMethodName = "set${paramName}"
+            val setMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
+            if (ele != null && setMethod != null) {
+                mv.visitVarInsn(ALOAD, varCounter)
+                if (isBasicType(it.type)) {
+                    addBasicByteCode(it.type, it.get(ins), mv)
+                } else {
+                    addObjectParamByteCode(it.type, ele.jsonObject, it.get(ins), mv)
                 }
+                mv.visitMethodInsn(
+                    INVOKEVIRTUAL, type.name.replace('.', '/'), setMethod.name,
+                    processMethodDesc(setMethod), false
+                )
+            } else if (ele != null && (it.modifiers and ACC_PUBLIC != 0)) {
+                mv.visitVarInsn(ALOAD, varCounter)
+                if (isBasicType(it.type)) {
+                    addBasicByteCode(it.type, it.get(ins), mv)
+                } else {
+                    addObjectParamByteCode(it.type, ele.jsonObject, it.get(ins), mv)
+                }
+                mv.visitFieldInsn(PUTFIELD, type.name.replace('.', '/'), paramName, mapTypeToDesc(it.type))
             }
         }
         mv.visitVarInsn(ALOAD, oldCounter)
     }
 
-    fun processStringByteCode(value: Any?, mv: MethodVisitor) {
-        mv.visitLdcInsn(value)
+    fun processVerifyByteCode(match: Method, mv: MethodVisitor, ret: Any?) {
+        varCounter++
+        mv.visitIntInsn(ISTORE, varCounter)
+        mv.visitVarInsn(ILOAD, varCounter)
+        if (isBasicType(match.returnType)) {
+            verifyBasic(match.returnType, ret, mv)
+        } else if(match.returnType.isArray) {
+            veryfyArraySize(ret, mv)
+        } else if (match.returnType.isAssignableFrom(List::class.java)) {
+            verifyListSize(ret, mv)
+        } else {
+            veryfyObject(match.returnType, mv, ret)
+        }
     }
 
-    fun isDefault(type: Class<*>?, value: Any?): Boolean {
+    fun veryfyArraySize(ret: Any?, mv: MethodVisitor) {
+        if (ret != null) {
+            val count = (ret as Array<*>).size
+            mv.visitInsn(ARRAYLENGTH)
+            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+            mv.visitIntInsn(BIPUSH, count)
+            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+            addVerifyByteCode(mv)
+        }
+    }
+
+    fun verifyListSize(ret: Any?, mv: MethodVisitor) {
+        if (ret != null) {
+            val count = (ret as List<*>).size
+            mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "size", "()I", true)
+            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+            mv.visitIntInsn(BIPUSH, count)
+            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+            addVerifyByteCode(mv)
+        }
+    }
+
+    private fun veryfyObject(type: Class<*>, mv: MethodVisitor, ret: Any?) {
+        val methods = type.methods
+        if (ret == null) {
+            return
+        }
+        type.declaredFields.forEach {
+            if (!isBasicType(it.type)) {
+                return@forEach
+            }
+            it.setAccessible(true)
+            val name = it.name
+            val setMethodName = "get${name}"
+            val getMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
+            val value = it.get(ret)
+            if (value != null && getMethod != null) {
+                mv.visitVarInsn(ALOAD, varCounter)
+                mv.visitMethodInsn(
+                    INVOKESPECIAL, type.name.replace('.', '/'), getMethod.name,
+                    processMethodDesc(getMethod), false
+                )
+                verifyBasic(it.type, value, mv)
+            } else if (it.modifiers and ACC_PUBLIC != 0) {
+                mv.visitVarInsn(ALOAD, varCounter)
+                mv.visitFieldInsn(
+                    GETFIELD,
+                    type.name.replace('.', '/'),
+                    it.name,
+                    mapTypeToDesc(it.type)
+                )
+                verifyBasic(it.type, value, mv)
+            }
+
+        }
+    }
+
+    private fun isBasicType(type: Class<*>) = type.isPrimitive or (type == String::class.java)
+
+    private fun isDefault(type: Class<*>?, value: Any?): Boolean {
         return when (type) {
             Byte::class.javaPrimitiveType -> value as Byte == 0.toByte()
             Char::class.javaPrimitiveType -> value as Char == 0.toChar()
@@ -220,136 +210,50 @@ abstract class MethodGenerator {
         }
     }
 
-    fun processVerifyByteCode(match: Method, mv: MethodVisitor, ret: Any?) {
-        varCounter++
-        mv.visitIntInsn(ISTORE, varCounter)
-        mv.visitVarInsn(ILOAD, varCounter)
-        if (match.returnType.isPrimitive) {
-            when (match.returnType) {
-                Byte::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(SIPUSH, ret as Int)
-                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Byte", "valueOf", "(I)Ljava/lang/Byte;", false)
-                }
-                Char::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(SIPUSH, ret as Int)
-                }
-                Double::class.javaPrimitiveType -> {
-                    mv.visitLdcInsn(ret)
-                }
-                Float::class.javaPrimitiveType -> {
-                    mv.visitLdcInsn(ret)
-                }
-                Int::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(SIPUSH, ret as Int)
-                    mv.visitMethodInsn(
-                        INVOKESTATIC,
-                        "java/lang/Integer",
-                        "valueOf",
-                        "(I)Ljava/lang/Integer;",
-                        false
-                    )
-                }
-                Long::class.javaPrimitiveType -> {
-                    mv.visitLdcInsn(ret)
-                }
-                Short::class.javaPrimitiveType -> {
-                    mv.visitIntInsn(SIPUSH, ret as Int)
-                    mv.visitMethodInsn(
-                        INVOKESTATIC,
-                        "java/lang/Short",
-                        "valueOf",
-                        "(I)Ljava/lang/Short;",
-                        false
-                    )
-                }
-                Boolean::class.javaPrimitiveType -> {
-                    if (ret as Boolean) {
-                        mv.visitInsn(ICONST_1)
-                    } else {
-                        mv.visitInsn(ICONST_0)
-                    }
-                    mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
-                }
-                else -> null
+    private fun verifyBasic(type: Class<*>, value: Any?, mv: MethodVisitor) {
+        addBasicByteCode(type, value, mv)
+        addVerifyByteCode(mv)
+    }
+
+    private fun addBasicByteCode(type: Class<*>, value: Any?, mv: MethodVisitor) {
+        when (type) {
+            Byte::class.javaPrimitiveType -> {
+                mv.visitIntInsn(SIPUSH, (value as Byte).toInt())
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Char")
             }
-            mv.visitMethodInsn(
-                INVOKESTATIC,
-                "org/hamcrest/core/Is",
-                "is",
-                "(Ljava/lang/Object;)Lorg/hamcrest/Matcher;",
-                false
-            )
-            mv.visitMethodInsn(
-                INVOKESTATIC,
-                "org/hamcrest/MatcherAssert",
-                "assertThat",
-                "(Ljava/lang/Object;Lorg/hamcrest/Matcher;)V",
-                false
-            )
-        } else if (match.returnType == String::class.java) {
-            mv.visitLdcInsn(ret)
-            mv.visitMethodInsn(
-                INVOKESTATIC,
-                "org/hamcrest/core/Is",
-                "is",
-                "(Ljava/lang/Object;)Lorg/hamcrest/Matcher;",
-                false
-            )
-            mv.visitMethodInsn(
-                INVOKESTATIC,
-                "org/hamcrest/MatcherAssert",
-                "assertThat",
-                "(Ljava/lang/Object;Lorg/hamcrest/Matcher;)V",
-                false
-            )
-        } else {
-            veryfyObject(match.returnType, mv, ret)
+            Char::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Char).toInt())
+            Double::class.javaPrimitiveType -> {
+                mv.visitLdcInsn(value)
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Double")
+            }
+            Float::class.javaPrimitiveType -> {
+                mv.visitLdcInsn(value)
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Float")
+            }
+            Int::class.javaPrimitiveType -> {
+                mv.visitLdcInsn(value)
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+            }
+            Long::class.javaPrimitiveType -> {
+                mv.visitLdcInsn(value)
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Long")
+            }
+            Short::class.javaPrimitiveType -> {
+                mv.visitIntInsn(SIPUSH, (value as Short).toInt())
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Short")
+            }
+            Boolean::class.javaPrimitiveType -> {
+                mv.visitInsn(if (value as Boolean) ICONST_1 else ICONST_0)
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
+            }
+            String::class.java -> {
+                mv.visitLdcInsn(value)
+            }
+            else -> mv.visitInsn(ACONST_NULL)
         }
     }
 
-    private fun veryfyObject(type: Class<*>, mv: MethodVisitor, ret: Any?) {
-        val methods = type.methods
-        if (ret == null) {
-            return
-        }
-        type.declaredFields.forEach {
-            it.setAccessible(true)
-            val name = it.name
-            val setMethodName = "get${name}"
-            val getMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
-            val value = it.get(ret)
-            if (value != null) {
-                if (getMethod != null) {
-                    if (it.type.isPrimitive or (it.type == String::class.java)) {
-                        mv.visitVarInsn(ALOAD, varCounter)
-                        mv.visitMethodInsn(
-                            INVOKESPECIAL, type.name.replace('.', '/'), getMethod.name,
-                            processMethodDesc(getMethod), false
-                        )
-                        verifyField(it, value, mv)
-                    }
-                } else if (it.modifiers and ACC_PUBLIC != 0) {
-                    if (it.type.isPrimitive or (it.type == String::class.java)) {
-                        mv.visitVarInsn(ALOAD, varCounter)
-                        mv.visitFieldInsn(
-                            GETFIELD,
-                            type.name.replace('.', '/'),
-                            it.name,
-                            mapTypeToDesc(it.type)
-                        )
-                        verifyField(it, value, mv)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun verifyField(it: Field, value: Any, mv: MethodVisitor) {
-        if (it.type.isPrimitive) {
-            processPrimitiveByteCode(it.type, value, mv)
-        } else {
-            processStringByteCode(value, mv)
-        }
+    private fun addVerifyByteCode(mv: MethodVisitor) {
         mv.visitMethodInsn(
             INVOKESTATIC,
             "org/hamcrest/core/Is",
@@ -396,5 +300,53 @@ abstract class MethodGenerator {
             '.',
             '/'
         )
+    }
+
+    private fun processPrimitive(
+        given: JsonElement?,
+        type: Class<*>
+    ): Any {
+        val givenContent = given?.content
+        return when (type) {
+            Byte::class.javaPrimitiveType -> givenContent?.toByte()
+            Char::class.javaPrimitiveType -> givenContent?.toCharArray()?.first()
+            Double::class.javaPrimitiveType -> givenContent?.toDouble()
+            Float::class.javaPrimitiveType -> givenContent?.toFloat()
+            Int::class.javaPrimitiveType -> givenContent?.toInt()
+            Long::class.javaPrimitiveType -> givenContent?.toLong()
+            Short::class.javaPrimitiveType -> givenContent?.toShort()
+            Boolean::class.javaPrimitiveType -> givenContent?.toBoolean()
+            String::class.java -> givenContent
+            else -> null
+        } as Any
+    }
+
+    fun postProcessPrimitive(returnType: Class<*>, mv: MethodVisitor) {
+        when (returnType) {
+            Byte::class.javaPrimitiveType -> mv.visitMethodInsn(
+                INVOKESTATIC,
+                "java/lang/Byte",
+                "valueOf",
+                "(I)Ljava/lang/Byte;",
+                false
+            )
+            Int::class.javaPrimitiveType -> mv.visitMethodInsn(
+                INVOKESTATIC, "java/lang/Integer", "valueOf",
+                "(I)Ljava/lang/Integer;", false
+            )
+            Short::class.javaPrimitiveType -> {
+                mv.visitMethodInsn(
+                    INVOKESTATIC,
+                    "java/lang/Short",
+                    "valueOf",
+                    "(I)Ljava/lang/Short;",
+                    false
+                )
+            }
+            Boolean::class.javaPrimitiveType -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
+            }
+            else -> null
+        }
     }
 }

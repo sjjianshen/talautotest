@@ -1,6 +1,11 @@
 package com.tal.autotest.tool
 
 import org.springframework.beans.BeanUtils
+import org.springframework.boot.context.config.ConfigFileApplicationListener
+import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent
+import org.springframework.context.ApplicationListener
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.io.support.SpringFactoriesLoader
 import org.springframework.test.context.*
 import org.springframework.test.context.support.*
 import org.springframework.util.Assert
@@ -26,6 +31,7 @@ class AllInOneContextBootStraper(private val declaredClz: Class<*>, private val 
             declaredClz, buildAllInOneContextConfiguration(),
             cacheAwareContextLoaderDelegate
         )
+
         return defaultTestContext
     }
 
@@ -83,7 +89,7 @@ class AllInOneContextBootStraper(private val declaredClz: Class<*>, private val 
         val mergedConfig = MergedContextConfiguration(
             testClass,
             StringUtils.toStringArray(locations), ClassUtils.toClassArray(classes),
-            setOf(),
+            setOf(TalApplicationContextInitializer::class.java),
             arrayOf(),
             arrayOf(),
             arrayOf(),
