@@ -2,3 +2,9 @@
 build
 .gradle
 gradle
+
+*.iml
+*/out
+*/target
+*/build
+*/ext

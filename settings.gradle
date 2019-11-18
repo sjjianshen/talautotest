@@ -1,2 +1,5 @@
 rootProject.name = 'autotest'
+include 'autotest-gradle-plugin'
+include 'autotest-example'
+include 'autotest-core'
 

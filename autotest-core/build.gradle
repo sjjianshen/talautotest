@@ -1,0 +1,58 @@
+buildscript {
+    ext.kotlin_version = '1.3.50'
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
+    }
+}
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.50'
+    id 'org.springframework.boot' version '2.1.7.RELEASE'
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'kotlinx-serialization'
+apply plugin: 'io.spring.dependency-management'
+
+group 'com.tal.autotest.plugin'
+version '1.1.001'
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': '工程实践组自动单测工具',
+                'Implementation-Version': version,
+                'Main-Class': 'com.tal.autotest.tool.ApplicationKt'
+    }
+    baseName = project.name
+    from {
+        configurations.compile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+//    from { zipTree("/Users/jianshen/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-runtime/0.12.0/418a99564fcb3fa1b278b529238d2cb5a3f80d7d/kotlinx-serialization-runtime-0.12.0.jar") }
+    with jar
+}
+
+dependencies {
+    compile('org.jetbrains.kotlin:kotlin-stdlib-jdk8')
+    compile('org.jetbrains.kotlin:kotlin-reflect:1.3.50')
+    compile('org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.12.0')
+    compile('com.charleskorn.kaml:kaml:0.13.0')
+    compile('org.ow2.asm:asm-all:5.2')
+    compile('org.springframework.boot:spring-boot-starter-test:2.1.7.RELEASE')
+    compile('org.jboss.windup.decompiler:decompiler-fernflower:4.2.1.Final')
+//    compile('com.google.code.gson:gson')
+//    compile group: 'junit', name: 'junit', version: '4.12'
+//    compile 'org.springframework.boot:spring-boot-starter-data-mongodb'
+//    compile 'org.springframework.boot:spring-boot-starter-web'
+//    implementation 'org.projectlombok:lombok:1.18.8'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
