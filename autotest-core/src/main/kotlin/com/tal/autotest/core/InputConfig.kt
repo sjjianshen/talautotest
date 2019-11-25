@@ -1,4 +1,4 @@
-package com.tal.autotest.tool
+package com.tal.autotest.core
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject

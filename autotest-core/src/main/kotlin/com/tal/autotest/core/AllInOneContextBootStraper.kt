@@ -1,4 +1,4 @@
-package com.tal.autotest.tool
+package com.tal.autotest.core
 
 import org.springframework.beans.BeanUtils
 import org.springframework.test.context.*

@@ -1,4 +1,4 @@
-package com.tal.autotest.tool
+package com.tal.autotest.core
 
 import kotlinx.serialization.json.Json
 import org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler
@@ -11,14 +11,25 @@ import java.nio.file.Paths
 
 class ClassGenerator(val workspace: String, val urls: Array<URL>) {
     public fun launch() {
-        val configPath = "$workspace/talTester/config1.json"
+        val configPath = "$workspace/autotest/config.json"
+        if (!Files.exists(Paths.get(configPath))) {
+            System.out.println("没有发现配置文件")
+            return
+        }
+        var projectType = "gradle"
+        if (Files.exists(Paths.get("${workspace}/pom.xml"))) {
+            projectType = "mvn"
+        }
         val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
 //        System.setProperty("cglib.debugLocation", "/Users/jianshen/workspace/innovation-backend/class")
 //        System.getProperties().put("sun.misc.ProxyGenerator.saveGeneratedFiles", "true")
         val outputPath = "$workspace/src/test/java"
-        val outputClassPath = "$workspace/build/talTester/classes"
+        var outputClassPath = "$workspace/build/autotest/classes"
+        if ("mvn".equals(projectType)) {
+            outputClassPath = "$workspace/target/autotest/classes"
+        }
         val targetClassLoader =
-            DirectoryClassLoader(workspace, urls, Thread.currentThread().contextClassLoader)
+            DirectoryClassLoader(workspace, urls, projectType, Thread.currentThread().contextClassLoader)
         Thread.currentThread().contextClassLoader = targetClassLoader
         config.classConfigs.forEach {
             val ccf = it
@@ -32,26 +43,7 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
                 val methods = clz?.methods
                 val cw = ClassWriter(0)
                 cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC + Opcodes.ACC_SUPER, slashedClassName, null, "java/lang/Object", null)
-                if (ccf.autowire) {
-                    var cav : AnnotationVisitor = cw.visitAnnotation("Lorg/junit/runner/RunWith;", true)
-                    cav.visit("value", Type.getType("Lorg/springframework/test/context/junit4/SpringRunner;"))
-                    cav.visitEnd()
-                    cav = cw.visitAnnotation("Lorg/springframework/test/context/ContextConfiguration;", true)
-                    var av1 = cav.visitArray("classes")
-                    av1.visit(null, Type.getType("L${ccf.appName.replace(".", "/")};"))
-                    av1.visitEnd()
-                    av1 = cav.visitArray("initializers")
-                    av1.visit(
-                        null,
-                        Type.getType("Lorg/springframework/boot/test/context/ConfigFileApplicationContextInitializer;")
-                    )
-                    av1.visitEnd()
-                    cav.visitEnd()
-                    val fv : FieldVisitor = cw.visitField(ACC_PRIVATE, "instance", "L${className};", null, null)
-                    val fav : AnnotationVisitor = fv.visitAnnotation("Lorg/springframework/beans/factory/annotation/Autowired;", true)
-                    fav.visitEnd()
-                    fv.visitEnd()
-                }
+                configAutowareClassIfNeeded(ccf, cw, className)
                 ccf.methodConfigs.forEach { methodConfig ->
                     val mcf = methodConfig
                     val methodName = mcf.name
@@ -92,6 +84,34 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
             }
         }
         decompileClass(outputPath, outputClassPath)
+    }
+
+    private fun configAutowareClassIfNeeded(
+        ccf: ClassConfig,
+        cw: ClassWriter,
+        className: String
+    ) {
+        if (ccf.autowire) {
+            var cav: AnnotationVisitor = cw.visitAnnotation("Lorg/junit/runner/RunWith;", true)
+            cav.visit("value", Type.getType("Lorg/springframework/test/context/junit4/SpringRunner;"))
+            cav.visitEnd()
+            cav = cw.visitAnnotation("Lorg/springframework/test/context/ContextConfiguration;", true)
+            var av1 = cav.visitArray("classes")
+            av1.visit(null, Type.getType("L${ccf.appName.replace(".", "/")};"))
+            av1.visitEnd()
+            av1 = cav.visitArray("initializers")
+            av1.visit(
+                null,
+                Type.getType("Lorg/springframework/boot/test/context/ConfigFileApplicationContextInitializer;")
+            )
+            av1.visitEnd()
+            cav.visitEnd()
+            val fv: FieldVisitor = cw.visitField(ACC_PRIVATE, "instance", "L${className};", null, null)
+            val fav: AnnotationVisitor =
+                fv.visitAnnotation("Lorg/springframework/beans/factory/annotation/Autowired;", true)
+            fav.visitEnd()
+            fv.visitEnd()
+        }
     }
 
     fun decompileClass(outputPath : String, outputClassPath : String) {

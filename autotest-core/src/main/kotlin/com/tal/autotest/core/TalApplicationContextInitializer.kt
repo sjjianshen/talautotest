@@ -1,4 +1,4 @@
-package com.tal.autotest.tool
+package com.tal.autotest.core
 
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.ConfigurableApplicationContext

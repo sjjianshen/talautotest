@@ -1,4 +1,4 @@
-package com.tal.autotest.tool
+package com.tal.autotest.core
 
 import kotlinx.serialization.json.JsonObject
 import org.objectweb.asm.MethodVisitor

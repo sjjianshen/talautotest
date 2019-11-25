@@ -1,10 +1,8 @@
-package com.tal.autotest.tool
+package com.tal.autotest.core
 
 import sun.misc.CompoundEnumeration
 import java.io.File
-import java.io.IOException
 import java.io.InputStream
-import java.net.JarURLConnection
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Files
@@ -15,10 +13,14 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
-class DirectoryClassLoader(private val workspace: String, urls: Array<URL>, private val oldCl: ClassLoader) :
-    URLClassLoader(urls, oldCl) {
-    private var classpath = "${workspace}/build/classes/java/main"
-    private var resourcePath = "${workspace}/build/resources/main"
+class DirectoryClassLoader(
+    private val workspace: String,
+    urls: Array<URL>,
+    projectType: String,
+    private val oldCl: ClassLoader
+) : URLClassLoader(urls, oldCl) {
+    private var classpath = if (projectType.equals("mvn")) "${workspace}/target/classes" else "${workspace}/build/classes/java/main"
+    private var resourcePath = if (projectType.equals("mvn")) "${workspace}/target/classes" else "${workspace}/build/resources/main"
     private var cache: HashMap<String, Class<*>?> = HashMap()
     private val auxPaths = mutableListOf<File>()
 
@@ -27,6 +29,11 @@ class DirectoryClassLoader(private val workspace: String, urls: Array<URL>, priv
         if (name.isEmpty()) {
             throw ClassNotFoundException(name)
         }
+
+        if (name.contains("SpringBootServletInitializer")) {
+            System.out.println("111")
+        }
+
         if (cache.containsKey(name)) {
             return cache[name]
         }

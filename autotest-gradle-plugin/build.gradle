@@ -5,7 +5,7 @@ plugins {
 apply plugin: 'java'
 apply plugin: 'maven'
 
-group 'com.tal.autotest.plugin'
+group 'com.tal.autotest'
 version '1.1.001'
 
 repositories {

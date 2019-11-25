@@ -1,4 +1,4 @@
-package com.tal.autotest.tool
+package com.tal.autotest.core
 
 import org.springframework.boot.context.config.ConfigFileApplicationListener
 import org.springframework.core.env.ConfigurableEnvironment

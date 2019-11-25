@@ -16,14 +16,11 @@ apply plugin: 'kotlin'
 apply plugin: 'kotlinx-serialization'
 apply plugin: 'io.spring.dependency-management'
 
-group 'com.tal.autotest.plugin'
-version '1.1.001'
-
 task fatJar(type: Jar) {
     manifest {
         attributes 'Implementation-Title': '工程实践组自动单测工具',
                 'Implementation-Version': version,
-                'Main-Class': 'com.tal.autotest.tool.ApplicationKt'
+                'Main-Class': 'com.tal.autotest.core.ApplicationKt'
     }
     baseName = project.name
     from {
