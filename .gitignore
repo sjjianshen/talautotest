@@ -1,8 +1,8 @@
 .idea
 build
 .gradle
-gradle
-
+gradle/wrapper
+.DS_Store
 *.iml
 */out
 */target

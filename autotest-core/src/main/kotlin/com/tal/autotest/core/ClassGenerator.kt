@@ -5,32 +5,20 @@ import org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.ACC_PRIVATE
 import java.io.File
-import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class ClassGenerator(val workspace: String, val urls: Array<URL>) {
+class ClassGenerator(autoTestContext: AutotestContext) {
+    val workspace = autoTestContext.workSpace
+    val outputPath = autoTestContext.outputPath
+    val outputClassPath = autoTestContext.outputClassPath
+    val configPath = autoTestContext.ConfigFile
     public fun launch() {
-        val configPath = "$workspace/autotest/config.json"
         if (!Files.exists(Paths.get(configPath))) {
             System.out.println("没有发现配置文件")
             return
         }
-        var projectType = "gradle"
-        if (Files.exists(Paths.get("${workspace}/pom.xml"))) {
-            projectType = "mvn"
-        }
         val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
-//        System.setProperty("cglib.debugLocation", "/Users/jianshen/workspace/innovation-backend/class")
-//        System.getProperties().put("sun.misc.ProxyGenerator.saveGeneratedFiles", "true")
-        val outputPath = "$workspace/src/test/java"
-        var outputClassPath = "$workspace/build/autotest/classes"
-        if ("mvn".equals(projectType)) {
-            outputClassPath = "$workspace/target/autotest/classes"
-        }
-        val targetClassLoader =
-            DirectoryClassLoader(workspace, urls, projectType, Thread.currentThread().contextClassLoader)
-        Thread.currentThread().contextClassLoader = targetClassLoader
         config.classConfigs.forEach {
             val ccf = it
             val className = ccf.name
@@ -39,7 +27,7 @@ class ClassGenerator(val workspace: String, val urls: Array<URL>) {
             val targetName = "$outputPath/${slashedClassName}.java"
             val targetClassPath = "${outputClassPath}/${slashedClassName}.class"
             if (true or Files.exists(Paths.get(targetName))) {
-                val clz = targetClassLoader.loadClass(className)
+                val clz = Thread.currentThread().contextClassLoader.loadClass(className)
                 val methods = clz?.methods
                 val cw = ClassWriter(0)
                 cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC + Opcodes.ACC_SUPER, slashedClassName, null, "java/lang/Object", null)

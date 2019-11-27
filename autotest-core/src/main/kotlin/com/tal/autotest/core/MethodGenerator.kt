@@ -151,6 +151,7 @@ abstract class MethodGenerator {
             veryfyArraySize(ret, mv)
         } else if (match.returnType.isAssignableFrom(List::class.java)) {
             verifyListSize(ret, mv)
+
         } else {
             veryfyObject(match.returnType, mv, ret)
         }
@@ -181,7 +182,7 @@ abstract class MethodGenerator {
     private fun veryfyObject(type: Class<*>, mv: MethodVisitor, ret: Any?) {
         val methods = type.methods
         if (ret == null) {
-            return
+            verifyBasic(type, ret, mv)
         }
         type.declaredFields.forEach {
             if (!isBasicType(it.type)) {
@@ -235,6 +236,11 @@ abstract class MethodGenerator {
     }
 
     private fun addBasicByteCode(type: Class<*>, value: Any?, mv: MethodVisitor) {
+        if (value == null) {
+            mv.visitInsn(ACONST_NULL)
+            return
+        }
+
         when (type) {
             Byte::class.javaPrimitiveType -> {
                 mv.visitIntInsn(SIPUSH, (value as Byte).toInt())

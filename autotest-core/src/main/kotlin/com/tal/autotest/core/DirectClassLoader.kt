@@ -14,10 +14,10 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class DirectoryClassLoader(
-    private val workspace: String,
+    workspace: String,
     urls: Array<URL>,
     projectType: String,
-    private val oldCl: ClassLoader
+    val oldCl: ClassLoader
 ) : URLClassLoader(urls, oldCl) {
     private var classpath = if (projectType.equals("mvn")) "${workspace}/target/classes" else "${workspace}/build/classes/java/main"
     private var resourcePath = if (projectType.equals("mvn")) "${workspace}/target/classes" else "${workspace}/build/resources/main"
@@ -26,59 +26,63 @@ class DirectoryClassLoader(
 
     @Synchronized
     override fun loadClass(name: String): Class<*>? {
-        if (name.isEmpty()) {
-            throw ClassNotFoundException(name)
+        if (name.contains("XPathConstants")) {
+            System.out.println("333")
         }
-
-        if (name.contains("SpringBootServletInitializer")) {
-            System.out.println("111")
+        if (name.contains("QName")) {
+            System.out.println("222")
         }
-
         if (cache.containsKey(name)) {
             return cache[name]
         }
+
+        var packageName: String? = null
+        val pos = name.lastIndexOf('.')
+        if (pos != -1)
+            packageName = name.substring(0, pos)
+        if (packageName != null) {
+            // Define the package (if null)
+            if (getPackage(packageName) == null) {
+                try {
+                    definePackage(packageName, null, null, null, null, null, null, null)
+                } catch (e: IllegalArgumentException) {
+                }
+                getPackage(packageName)
+            }
+        }
         var res: Class<*>? = null
+        if (!name.startsWith("javax.xml")) {
+            try {
+                res = super.findClass(name)
+            } catch (e: Throwable) {
+            }
+            if (res != null) {
+                cache[name] = res
+                return res
+            }
+        }
+
+        try {
+            val data: ByteArray = loadClassData(name)
+            res = defineClass(name, data, 0, data.size)
+            resolveClass(res)
+        } catch (e: Exception) {
+        }
+        if (res != null) {
+            cache[name] = res
+            return res
+        }
+
         try {
             res = oldCl.loadClass(name)
         } catch (e: Throwable) {
         }
-        if (res == null) {
-            try {
-                res = super.loadClass(name)
-            } catch (e: Throwable) {
-            }
+        if (res != null) {
+            cache[name] = res
+            return res
         }
-        if (res == null) {
-            var packageName: String? = null
-            val pos = name.lastIndexOf('.')
-            if (pos != -1)
-                packageName = name.substring(0, pos)
 
-            var pkg: Package? = null
-
-            if (packageName != null) {
-                pkg = getPackage(packageName)
-                // Define the package (if null)
-                if (pkg == null) {
-                    try {
-                        definePackage(packageName, null, null, null, null, null, null, null)
-                    } catch (e: IllegalArgumentException) {
-                        // Ignore: normal error due to dual definition of package
-                    }
-                    pkg = getPackage(packageName)
-                }
-            }
-
-            try {
-                val data: ByteArray = loadClassData(name)
-                res = defineClass(name, data, 0, data.size)
-                resolveClass(res)
-            } catch (e: Exception) {
-                throw ClassNotFoundException(e.message)
-            }
-        }
-        cache[name] = res
-        return res
+        throw ClassNotFoundException(name)
     }
 
     private fun loadClassData(name: String): ByteArray {
