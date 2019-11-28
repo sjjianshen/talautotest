@@ -5,5 +5,14 @@
   <groupId>com.tal.autotest</groupId>
   <artifactId>autotest-gradle-plugin</artifactId>
   <version>1.1.001</version>
-  <description>POM was created from install:install-file</description>
+  <name>autotest-gradle-plugin</name>
+  <description>description</description>
+  <dependencies>
+    <dependency>
+      <groupId>com.tal.autotest</groupId>
+      <artifactId>autotest-core</artifactId>
+      <version>1.1.001</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
 </project>

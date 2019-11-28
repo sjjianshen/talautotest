@@ -1,8 +1,9 @@
 package com.tal.autotest.gradle;
 
-import com.tal.autotest.core.ClassGenerator;
 import com.tal.autotest.core.DirectoryClassLoader;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import java.lang.reflect.Constructor;
@@ -11,19 +12,46 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class AutotestTask extends DefaultTask {
     @TaskAction
-    public void generate() {List<URL> urls = new ArrayList<>();
-        getProject().getConfigurations().getByName("compile").getFiles().forEach(file -> {
-            try {
-                System.out.println(file.toURI().toURL().toString());
-                urls.add(file.toURI().toURL());
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
+    public void autotest() {
+        List<URL> urls = new ArrayList<>();
+        ConfigurationContainer configurations = getProject().getConfigurations();
+//        configurations.getByName("compile").getFiles().forEach(file -> {
+//            try {
+//                urls.add(file.toURI().toURL());
+//            } catch (MalformedURLException e) {
+//                e.printStackTrace();
+//            }
+//        });
+//        configurations.getByName("test").getFiles().forEach(file -> {
+//            try {
+//                urls.add(file.toURI().toURL());
+//            } catch (MalformedURLException e) {
+//                e.printStackTrace();
+//            }
+//        });
+        List<String> configToSkip = Arrays.asList("apiElements", "implementation", "runtimeElements", "runtimeOnly");
+        for (Map.Entry<String, Configuration> it : configurations.getAsMap().entrySet()) {
+            System.out.println("loading configurations for " + it.getKey());
+            if (!configToSkip.contains(it.getKey())) {
+                try {
+                    it.getValue().getFiles().forEach(file -> {
+                        try {
+                            urls.add(file.toURI().toURL());
+                        } catch (MalformedURLException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                } catch (Exception e) {
+                    System.out.println("loading configurations failed for " + it.getKey());
+                }
             }
-        });
+        }
 
         System.out.println("开始生成");
         ClassLoader oldCl = Thread.currentThread().getContextClassLoader();

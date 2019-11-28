@@ -5,32 +5,12 @@ plugins {
 apply plugin: 'java'
 apply plugin: 'maven'
 
-group 'com.tal.autotest'
-version '1.1.001'
-
-repositories {
-    mavenCentral()
-    jcenter()
-}
-
 dependencies {
-    implementation gradleApi()
-    implementation localGroovy()
-    compile project(":autotest-core")
+    compile gradleApi()
+    compile localGroovy()
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation "com.tal.autotest:autotest-core:1.1.001"
 }
 
 targetCompatibility = '1.8'
 sourceCompatibility = '1.8'
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            repository (url: "file:///Users/jianshen/workspace/autotest/dist")
-            pom.project {
-                name = project.name
-                packaging = 'jar'
-                description = 'description'
-            }
-        }
-    }
-}
