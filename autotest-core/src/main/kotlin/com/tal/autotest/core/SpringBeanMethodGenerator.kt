@@ -33,11 +33,15 @@ class SpringBeanMethodGenerator(
         val obj = clz.newInstance()
         System.out.println("autowire instance")
         context.prepareTestInstance(obj)
-        val ret = method.invoke(obj, *list.toArray())
-        if (method.returnType.isPrimitive) {
-            postProcessPrimitive(method.returnType, mv)
+        try {
+            val ret = method.invoke(obj, *list.toArray())
+            if (method.returnType.isPrimitive) {
+                postProcessPrimitive(method.returnType, mv)
+            }
+            processVerifyByteCode(method, mv, ret)
+        } catch (e : Exception) {
         }
-        processVerifyByteCode(method, mv, ret)
+
         mv.visitInsn(RETURN)
         mv.visitMaxs(varCounter + 1, varCounter + 1)
     }

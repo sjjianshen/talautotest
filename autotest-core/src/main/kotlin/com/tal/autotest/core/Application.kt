@@ -15,12 +15,16 @@ fun main(args: Array<String>) {
         }
     }
     val atc = AutotestContext(projectType, workspace, configFile, outputPath, outputClassPath)
-    val oldCl = Thread.currentThread().contextClassLoader
-    val targetClassLoader = DirectoryClassLoader(
-        workspace, urls.toTypedArray(), "gradle",
-        oldCl
-    )
-    Thread.currentThread().contextClassLoader = targetClassLoader
+    val current = Thread.currentThread().contextClassLoader
+//    if (urls.size > 0) {
+        val targetClassLoader = DirectoryClassLoader(
+            workspace, urls.toTypedArray(), "gradle",
+            current
+        )
+        Thread.currentThread().contextClassLoader = targetClassLoader
+//    }
     ClassGenerator(atc).launch()
-    Thread.currentThread().contextClassLoader = oldCl
+//    if (urls.size > 0) {
+        Thread.currentThread().contextClassLoader = current
+//    }
 }

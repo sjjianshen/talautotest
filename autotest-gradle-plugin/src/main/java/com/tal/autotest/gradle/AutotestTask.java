@@ -1,16 +1,12 @@
 package com.tal.autotest.gradle;
 
-import com.tal.autotest.core.DirectoryClassLoader;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.tasks.TaskAction;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,68 +15,50 @@ import java.util.Map;
 public class AutotestTask extends DefaultTask {
     @TaskAction
     public void autotest() {
-        List<URL> urls = new ArrayList<>();
+        List<String> cmd = new ArrayList<>();
+        cmd.add("java");
+
+        List<String> paths = new ArrayList<>();
         ConfigurationContainer configurations = getProject().getConfigurations();
-//        configurations.getByName("compile").getFiles().forEach(file -> {
-//            try {
-//                urls.add(file.toURI().toURL());
-//            } catch (MalformedURLException e) {
-//                e.printStackTrace();
-//            }
-//        });
-//        configurations.getByName("test").getFiles().forEach(file -> {
-//            try {
-//                urls.add(file.toURI().toURL());
-//            } catch (MalformedURLException e) {
-//                e.printStackTrace();
-//            }
-//        });
         List<String> configToSkip = Arrays.asList("apiElements", "implementation", "runtimeElements", "runtimeOnly");
         for (Map.Entry<String, Configuration> it : configurations.getAsMap().entrySet()) {
             System.out.println("loading configurations for " + it.getKey());
             if (!configToSkip.contains(it.getKey())) {
                 try {
-                    it.getValue().getFiles().forEach(file -> {
-                        try {
-                            urls.add(file.toURI().toURL());
-                        } catch (MalformedURLException e) {
-                            e.printStackTrace();
-                        }
-                    });
+                    it.getValue().getFiles().forEach(file -> paths.add(file.getAbsolutePath()));
                 } catch (Exception e) {
                     System.out.println("loading configurations failed for " + it.getKey());
                 }
             }
         }
+        String runtimePaths = String.join(File.pathSeparator, paths);
+        String sysPaths = System.getProperty("java.class.path");
+        if (sysPaths != null) {
+            runtimePaths = runtimePaths + File.pathSeparator + sysPaths;
+        }
+        runtimePaths += File.pathSeparator + getProject().getBuildDir() + "/classes";
+        cmd.add("-cp");
+        cmd.add(runtimePaths);
 
-        System.out.println("开始生成");
-        ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
-        ClassLoader targetClassLoader =
-                new DirectoryClassLoader(getProject().getProjectDir().getAbsolutePath(),
-                        urls.toArray(new URL[0]), "gradle", oldCl);
-        Thread.currentThread().setContextClassLoader(targetClassLoader);
-        String[] params = new String[5];
-        String workspace = getProject().getProjectDir().getAbsolutePath();
-        String projectType = "mvn";
-        String outputPath = workspace + "/src/test/java";
-        String outputClassPath = workspace + "/build/autotest/classes";
-        String configFile = workspace + "/autotest/config.json";
-        params[0] = workspace;
-        params[1] = projectType;
-        params[2] = outputPath;
-        params[3] = outputClassPath;
-        params[4] = configFile;
+        String mainApp = "com.tal.autotest.core.ApplicationKt";
+        cmd.add(mainApp);
+
+        String workDir = getProject().getProjectDir().getAbsolutePath();
+        cmd.add(workDir);
+
+        System.out.println("生成引擎开始运行, 运行命令");
+//        System.out.println(String.join(" ", cmd));
+
+        ProcessBuilder builder = new ProcessBuilder(cmd);
+        builder.redirectErrorStream(true); // redirect error stream to output stream
+        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        builder.directory(new File(workDir));
         try {
-            Class<?> mainClass = targetClassLoader.loadClass("com.tal.autotest.core.Launcher");
-            Constructor ctor = mainClass.getConstructor();
-            Object instance = ctor.newInstance();
-            Method method = mainClass.getDeclaredMethod("launch", String[].class);
-            method.invoke(instance, new Object[] { params });
-            Thread.currentThread().setContextClassLoader(oldCl);
-        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            Process process = builder.start();
+            process.waitFor();
+        } catch (Exception e) {
             System.out.println(e.getMessage());
             System.out.println("跳过该模块的生成");
-            e.printStackTrace();
         }
         System.out.println("生成完毕");
     }
