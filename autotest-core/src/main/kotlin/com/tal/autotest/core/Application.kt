@@ -27,4 +27,5 @@ fun main(args: Array<String>) {
 //    if (urls.size > 0) {
         Thread.currentThread().contextClassLoader = current
 //    }
+    System.exit(0)
 }

@@ -41,8 +41,8 @@ class SpringBeanMethodGenerator(
             processVerifyByteCode(method, mv, ret)
         } catch (e : Exception) {
         }
-
         mv.visitInsn(RETURN)
         mv.visitMaxs(varCounter + 1, varCounter + 1)
+        context.afterTestClass()
     }
 }

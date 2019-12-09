@@ -5,8 +5,9 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.tasks.TaskAction;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,15 +52,44 @@ public class AutotestTask extends DefaultTask {
 
         ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectErrorStream(true); // redirect error stream to output stream
-        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+//        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         builder.directory(new File(workDir));
         try {
             Process process = builder.start();
-            process.waitFor();
+            handleOutput(process);
+            int exitCode = process.waitFor();
+            if(exitCode != 0){
+                System.out.println("Error in autotest");
+            } else {
+                System.out.println("autotest terminated");
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
             System.out.println("跳过该模块的生成");
         }
         System.out.println("生成完毕");
+    }
+
+    private void handleOutput(Process process) {
+        Thread reader = new Thread(){
+            @Override
+            public void run(){
+                try{
+                    BufferedReader in = new BufferedReader(
+                            new InputStreamReader(process.getInputStream()));
+
+                    while(!this.isInterrupted()){
+                        String line = in.readLine();
+                        if(line!=null && !line.isEmpty()){
+                            System.out.println(line);
+                        }
+                    }
+                } catch(Exception e){
+                    System.out.println("Exception while reading spawn process output: "+ e.toString());
+                }
+            }
+        };
+        reader.start();
+        System.out.println("Started thread to read spawn process output");
     }
 }
