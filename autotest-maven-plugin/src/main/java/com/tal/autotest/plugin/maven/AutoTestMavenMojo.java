@@ -1,7 +1,5 @@
 package com.tal.autotest.plugin.maven;
 
-//import com.tal.autotest.core.AutotestContext;
-import com.tal.autotest.core.DirectoryClassLoader;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -11,11 +9,6 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -30,54 +23,50 @@ public class AutoTestMavenMojo extends AbstractMojo {
     @Override
     public void execute() {
         System.out.println("任务开始");
-        List<URL> urls = new ArrayList<>();
+        List<String> cmd = new ArrayList<>();
+        cmd.add("java");
+
+        List<String> paths = new ArrayList<>();
+
         try {
             Set<String> classpathElements = new HashSet<>();
             classpathElements.addAll(project.getCompileClasspathElements());
             classpathElements.addAll(project.getRuntimeClasspathElements());
             classpathElements.addAll(project.getTestClasspathElements());
-            classpathElements.forEach(path -> {
-                try {
-                    urls.add(new File(path).toURI().toURL());
-                } catch (MalformedURLException e) {
-                    System.out.println("定位依赖文件失败: " + path);
-                    e.printStackTrace();
-                }
-            });
-            System.out.println("开始生成");
-            ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
-            ClassLoader targetClassLoader =
-                    new DirectoryClassLoader(project.getBasedir().getAbsolutePath(), urls.toArray(new URL[0]), "mvn",
-                            oldCl);
-            Thread.currentThread().setContextClassLoader(targetClassLoader);
-            String[] params = new String[5];
-            String workspace = project.getBasedir().getAbsolutePath();
-            String projectType = "mvn";
-            String outputPath = workspace + "/src/test/java";
-            String outputClassPath = workspace + "/target/autotest/classes";
-            String configFile = workspace + "/autotest/config.json";
-            params[0] = workspace;
-            params[1] = projectType;
-            params[2] = outputPath;
-            params[3] = outputClassPath;
-            params[4] = configFile;
-
-//            AutotestContext atc = new AutotestContext(projectType, workspace, configFile, outputPath, outputClassPath);
-            Class<?> mainClass = targetClassLoader.loadClass("com.tal.autotest.core.Launcher");
-            Constructor ctor = mainClass.getConstructor();
-            Object instance = ctor.newInstance();
-            Method method = mainClass.getDeclaredMethod("launch", String[].class);
-            method.invoke(instance, new Object[] { params });
-            System.out.println("生成完毕");
-            Thread.currentThread().setContextClassLoader(oldCl);
+            classpathElements.forEach(path -> paths.add(path));
         } catch (DependencyResolutionRequiredException e) {
             e.printStackTrace();
             System.out.println("解析工程依赖失败");
-        } catch (ClassNotFoundException e) {
-            System.out.println("classpath 中没有找到工具类, 跳过生成");
-
-        } catch (IllegalAccessException | InstantiationException | NoSuchMethodException | InvocationTargetException e) {
-            e.printStackTrace();
         }
+        String sysPaths = System.getProperty("java.class.path");
+        if (sysPaths != null) {
+            paths.add(sysPaths);
+        }
+        paths.add(project.getBasedir().getAbsolutePath() + "/target/classes");
+        String runtimePaths = String.join(File.pathSeparator, paths);
+        cmd.add("-cp");
+        cmd.add(runtimePaths);
+
+        String mainApp = "com.tal.autotest.core.ApplicationKt";
+        cmd.add(mainApp);
+
+        String workDir = project.getBasedir().getAbsolutePath();
+        cmd.add(workDir);
+
+        System.out.println("生成引擎开始运行, 运行命令");
+//        System.out.println(String.join(" ", cmd));
+
+        ProcessBuilder builder = new ProcessBuilder(cmd);
+        builder.redirectErrorStream(true); // redirect error stream to output stream
+        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        builder.directory(new File(workDir));
+        try {
+            Process process = builder.start();
+            process.waitFor();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            System.out.println("跳过该模块的生成");
+        }
+        System.out.println("生成完毕");
     }
 }
