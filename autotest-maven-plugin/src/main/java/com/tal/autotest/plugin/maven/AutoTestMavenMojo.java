@@ -53,20 +53,53 @@ public class AutoTestMavenMojo extends AbstractMojo {
         String workDir = project.getBasedir().getAbsolutePath();
         cmd.add(workDir);
 
+        String appClassPath = workDir + "/target/classes";
+        cmd.add(appClassPath);
+
+        String appResourcePath = workDir + "/target/classes";
+        cmd.add(appResourcePath);
+
         System.out.println("生成引擎开始运行, 运行命令");
-//        System.out.println(String.join(" ", cmd));
 
         ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectErrorStream(true); // redirect error stream to output stream
-        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         builder.directory(new File(workDir));
         try {
             Process process = builder.start();
-            process.waitFor();
+            handleOutput(process);
+            int exitCode = process.waitFor();
+            if(exitCode != 0){
+                System.out.println("Error in autotest");
+            } else {
+                System.out.println("autotest terminated");
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
             System.out.println("跳过该模块的生成");
         }
         System.out.println("生成完毕");
+    }
+
+    private void handleOutput(Process process) {
+        Thread reader = new Thread(){
+            @Override
+            public void run(){
+                try{
+                    BufferedReader in = new BufferedReader(
+                            new InputStreamReader(process.getInputStream()));
+
+                    while(!this.isInterrupted()){
+                        String line = in.readLine();
+                        if(line!=null && !line.isEmpty()){
+                            System.out.println(line);
+                        }
+                    }
+                } catch(Exception e){
+                    System.out.println("Exception while reading spawn process output: "+ e.toString());
+                }
+            }
+        };
+        reader.start();
+        System.out.println("Started thread to read spawn process output");
     }
 }

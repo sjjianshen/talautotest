@@ -1,29 +1,24 @@
-package com.tal.autotest.core
+package com.tal.autotest.core.generateor.testcase
 
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.springframework.test.context.TestContextManager
 import java.lang.reflect.Method
 
-class SpringBeanMethodGenerator(
+class SpringBeanMethodTestCaseGenerator(
     private val mv: MethodVisitor,
+    private val context: TestContextManager,
     private val clz: Class<*>,
     private val method: Method,
-    private val testClassName : String,
-    private val appName : String,
-    private val config: List<JsonObject>
-) : MethodGenerator() {
-    private val context: TestContextManager = TestContextManager(
-        AllInOneContextBootStraper(
-            clz,
-            Thread.currentThread().contextClassLoader.loadClass(appName)
-        )
-    )
+    private val config: List<JsonElement>
+) : TestCaseGenerator() {
+
 
     override fun generate() {
         val className = clz.name
         val slashedClzName = className.replace('.', '/')
+        val testClassName = "${slashedClzName}Test"
         mv.visitVarInsn(ALOAD, 0)
         mv.visitFieldInsn(GETFIELD, testClassName, "instance", "L${slashedClzName};")
         val list = processParams(method, config)

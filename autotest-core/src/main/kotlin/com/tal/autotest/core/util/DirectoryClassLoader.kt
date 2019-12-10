@@ -1,10 +1,9 @@
-package com.tal.autotest.core
+package com.tal.autotest.core.util
 
 import sun.misc.CompoundEnumeration
 import java.io.File
 import java.io.InputStream
 import java.net.URL
-import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.security.AccessController
@@ -14,24 +13,16 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class DirectoryClassLoader(
-    workspace: String,
-    urls: Array<URL>,
-    projectType: String,
+    val classpath: String,
+    val resourcePath: String,
     val oldCl: ClassLoader
-) : URLClassLoader(urls, oldCl) {
-    private var classpath = if (projectType.equals("mvn")) "${workspace}/target/classes" else "${workspace}/build/classes/java/main"
-    private var resourcePath = if (projectType.equals("mvn")) "${workspace}/target/classes" else "${workspace}/build/resources/main"
+) : ClassLoader(oldCl) {
+
     private var cache: HashMap<String, Class<*>?> = HashMap()
     private val auxPaths = mutableListOf<File>()
 
     @Synchronized
     override fun loadClass(name: String): Class<*>? {
-        if (name.contains("XPathConstants")) {
-            System.out.println("333")
-        }
-        if (name.contains("QName")) {
-            System.out.println("222")
-        }
         if (cache.containsKey(name)) {
             return cache[name]
         }

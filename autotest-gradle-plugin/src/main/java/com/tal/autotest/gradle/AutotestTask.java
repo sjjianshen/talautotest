@@ -47,12 +47,16 @@ public class AutotestTask extends DefaultTask {
         String workDir = getProject().getProjectDir().getAbsolutePath();
         cmd.add(workDir);
 
+        String appClassPath = workDir + "/build/classes/java/main";
+        cmd.add(appClassPath);
+
+        String appResourcePath = workDir + "/build/resources/main";
+        cmd.add(appResourcePath);
+
         System.out.println("生成引擎开始运行, 运行命令");
-//        System.out.println(String.join(" ", cmd));
 
         ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectErrorStream(true); // redirect error stream to output stream
-//        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         builder.directory(new File(workDir));
         try {
             Process process = builder.start();

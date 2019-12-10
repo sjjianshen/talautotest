@@ -1,7 +1,6 @@
-package com.tal.autotest.core
+package com.tal.autotest.core.util
 
 data class AutotestContext(
-    var projectType: String,
     var workSpace: String,
     var ConfigFile: String,
     var outputPath: String,

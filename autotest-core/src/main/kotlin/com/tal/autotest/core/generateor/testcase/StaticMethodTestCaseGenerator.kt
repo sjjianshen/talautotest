@@ -1,17 +1,17 @@
-package com.tal.autotest.core
+package com.tal.autotest.core.generateor.testcase
 
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Opcodes.RETURN
 import java.lang.reflect.Method
 
-class StaticMethodGenerator(
+class StaticMethodTestCaseGenerator(
     private val mv: MethodVisitor,
     private val clz: Class<*>,
     private val method: Method,
-    private val config: List<JsonObject>
-) : MethodGenerator() {
+    private val config: List<JsonElement>
+) : TestCaseGenerator() {
     override fun generate() {
         val list = processParams(method, config)
         addParamsByteCode(method, config, list, mv)

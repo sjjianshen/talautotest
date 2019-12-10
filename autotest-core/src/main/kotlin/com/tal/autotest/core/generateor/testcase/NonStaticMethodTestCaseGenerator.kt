@@ -1,16 +1,16 @@
-package com.tal.autotest.core
+package com.tal.autotest.core.generateor.testcase
 
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import java.lang.reflect.Method
 
-class NonStaticMethodGenerator(
+class NonStaticMethodTestCaseGenerator(
     private val mv: MethodVisitor,
     private val clz: Class<*>,
     private val method: Method,
-    private val config: List<JsonObject>
-) : MethodGenerator() {
+    private val config: List<JsonElement>
+) : TestCaseGenerator() {
     override fun generate() {
         varCounter++
         mv.visitTypeInsn(NEW, clz.name.replace('.', '/'))
