@@ -34,4 +34,34 @@ public class TestExample {
         MatcherAssert.assertThat(Boolean.valueOf(var1), Is.is(false));
         return "0";
     }
+
+    public String not(boolean b) {
+        if (b) {
+            return "false";
+        }
+        return "true";
+    }
+
+    public void testNot() {
+        TestExample testExample = new TestExample();
+        boolean b = Boolean.valueOf("true");
+        char c = "1".charAt(0);
+        short s = Short.valueOf("1");
+        int i = Integer.valueOf("1");
+        long l = Long.valueOf("1");
+        float f = Float.valueOf("1");
+        double d = Double.valueOf("1");
+        byte bt = Byte.valueOf("1");
+        User u = new User();
+        u.setName("sj");
+        u.setAge(30);
+        Address a = new Address();
+        a.setCountry("BJ");
+        a.setCountry("CN");
+        u.setAddress(a);
+        String res = testExample.test(b, c,s,i
+                , l, f, d, bt
+                , u
+        );
+    }
 }

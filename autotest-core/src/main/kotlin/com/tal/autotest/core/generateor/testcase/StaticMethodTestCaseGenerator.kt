@@ -1,6 +1,6 @@
 package com.tal.autotest.core.generateor.testcase
 
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Opcodes.RETURN
@@ -10,7 +10,7 @@ class StaticMethodTestCaseGenerator(
     private val mv: MethodVisitor,
     private val clz: Class<*>,
     private val method: Method,
-    private val config: List<JsonElement>
+    private val config: List<JsonObject>
 ) : TestCaseGenerator() {
     override fun generate() {
         val list = processParams(method, config)
@@ -19,7 +19,7 @@ class StaticMethodTestCaseGenerator(
         val methodDesc = processMethodDesc(method)
         mv.visitMethodInsn(INVOKESTATIC, clz.name.replace('.', '/'), method.name, methodDesc, false)
         if (method.returnType.isPrimitive) {
-            postProcessPrimitive(method.returnType, mv)
+            postProcess(method.returnType, mv)
         }
         processVerifyByteCode(method, mv, ret)
         mv.visitInsn(RETURN)

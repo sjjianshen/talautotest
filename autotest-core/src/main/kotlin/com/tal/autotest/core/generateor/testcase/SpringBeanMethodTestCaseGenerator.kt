@@ -1,6 +1,6 @@
 package com.tal.autotest.core.generateor.testcase
 
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.springframework.test.context.TestContextManager
@@ -11,10 +11,8 @@ class SpringBeanMethodTestCaseGenerator(
     private val context: TestContextManager,
     private val clz: Class<*>,
     private val method: Method,
-    private val config: List<JsonElement>
+    private val config: List<JsonObject>
 ) : TestCaseGenerator() {
-
-
     override fun generate() {
         val className = clz.name
         val slashedClzName = className.replace('.', '/')
@@ -31,7 +29,7 @@ class SpringBeanMethodTestCaseGenerator(
         try {
             val ret = method.invoke(obj, *list.toArray())
             if (method.returnType.isPrimitive) {
-                postProcessPrimitive(method.returnType, mv)
+                postProcess(method.returnType, mv)
             }
             processVerifyByteCode(method, mv, ret)
         } catch (e : Exception) {

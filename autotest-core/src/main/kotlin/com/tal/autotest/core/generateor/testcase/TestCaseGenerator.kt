@@ -1,19 +1,33 @@
 package com.tal.autotest.core.generateor.testcase
 
 import com.google.gson.Gson
-import com.tal.autotest.core.util.ClassConfig
-import com.tal.autotest.core.util.MethodConfig
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.content
-import org.objectweb.asm.ClassVisitor
+import kotlinx.serialization.json.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
+import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl
 import java.lang.reflect.Method
 
 abstract class TestCaseGenerator {
     internal var varCounter = 0
+    val componentBoxedTypes = arrayListOf<String>()
+    val componentPrimitiveTypes = arrayListOf<String>()
+
+    init {
+        componentBoxedTypes.add("java.lang.Boolean")
+        componentBoxedTypes.add("java.lang.Byte")
+        componentBoxedTypes.add("java.lang.Short")
+        componentBoxedTypes.add("java.lang.Integer")
+        componentBoxedTypes.add("java.lang.Float")
+        componentBoxedTypes.add("java.lang.Double")
+        componentBoxedTypes.add("java.lang.Long")
+        componentPrimitiveTypes.add("int")
+        componentPrimitiveTypes.add("char")
+        componentPrimitiveTypes.add("boolean")
+        componentPrimitiveTypes.add("long")
+        componentPrimitiveTypes.add("short")
+        componentPrimitiveTypes.add("float")
+        componentPrimitiveTypes.add("double")
+    }
 
     abstract fun generate()
 
@@ -26,12 +40,14 @@ abstract class TestCaseGenerator {
             val given = configParams.get(index).jsonObject.get("value")
             if (isBasicType(it.type)) {
                 list.add(processPrimitive(given, it.type))
+            } else if (it.type == String::class.java) {
+                list.add((given as JsonLiteral).content)
             } else if (it.type.isArray) {
-                list.add(if (given?.jsonArray != null) processArray(given.jsonArray, it.type) else null)
+                list.add(if (given?.jsonArray != null) processArray(given.jsonArray, (it.parameterizedType as Class<*>).componentType) else null)
             } else if (match.returnType.isAssignableFrom(List::class.java)) {
-                list.add(if (given?.jsonArray != null) processList(given.jsonArray, it.type) else null)
+                list.add(if (given?.jsonArray != null) processList(given.jsonArray, (it.parameterizedType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>) else null)
             } else {
-                list.add(processObject(given?.content, it.type))
+                list.add(processObject(given?.toString(), it.type))
             }
         }
         return list
@@ -56,7 +72,79 @@ abstract class TestCaseGenerator {
         } as Any
     }
 
-    private fun processArray(jsonArray: JsonArray, type: Class<*>): Array<Any?> {
+    private fun processArray(jsonArray: JsonArray, type: Class<*>): Any {
+        if (isPrimitiveBasicType(type)) {
+            val size = jsonArray.size
+            when(type.name) {
+                "int" -> {
+                    val init: (Int) -> Int = {0}
+                    val res = IntArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toInt()
+                    }
+                    return res
+                }
+                "short" -> {
+                    val init: (Int) -> Short = {0}
+                    val res = ShortArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toShort()
+                    }
+                    return res
+                }
+                "boolean" -> {
+                    val init: (Int) -> Boolean = {true}
+                    val res = BooleanArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toBoolean()
+                    }
+                    return res
+                }
+                "byte" -> {
+                    val init: (Int) -> Byte = {0}
+                    val res = ByteArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toByte()
+                    }
+                    return res
+                }
+                "char" -> {
+                    val init: (Int) -> Char = {'0'}
+                    val res = CharArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toCharArray()[0]
+                    }
+                    return res
+                }
+                "float" -> {
+                    val init: (Int) -> Float = {0.0f}
+                    val res = FloatArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toFloat()
+                    }
+                    return res
+                }
+                "double" -> {
+                    val init: (Int) -> Double = {0.0}
+                    val res = DoubleArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toDouble()
+                    }
+                    return res
+                }
+                "long" -> {
+                    val init: (Int) -> Long = {0}
+                    val res = LongArray(size,init)
+                    jsonArray.forEachIndexed { index, jsonElement ->
+                        res[index] = (jsonElement as JsonLiteral).content.toLong()
+                    }
+                    return res
+                }
+                else -> {
+                    return emptyArray<Any>()
+                }
+            }
+        }
         return processList(jsonArray, type).toTypedArray()
     }
 
@@ -66,7 +154,7 @@ abstract class TestCaseGenerator {
     ): MutableList<Any?> {
         var res = mutableListOf<Any?>()
         jsonArray.forEach {
-            res.add(processObject(it.content, type.componentType))
+            res.add(processObject(it.content, type))
         }
         return res
     }
@@ -85,77 +173,184 @@ abstract class TestCaseGenerator {
 
     fun addParamsByteCode(
         match: Method,
-        configParams: List<JsonElement>,
+        configParams: List<JsonObject>,
         list: java.util.ArrayList<Any?>,
         mv: MethodVisitor
     ) {
         match.parameters.forEachIndexed { index, parameter ->
+            val paramValue = configParams[index]["value"]!!
             if (isBasicType(parameter.type)) {
-                addBasicByteCode(parameter.type, list.get(index), mv)
+                addBasicByteCode(parameter.type, (paramValue as JsonLiteral).content, mv)
+            } else if (parameter.type == String::class.java) {
+                addStringByteCode((paramValue as JsonLiteral).content, mv)
             } else if (parameter.type.isArray) {
-                addArrayParamByteCode(parameter.type.componentType, configParams.get(index).jsonArray,
-                    list.get(index) as Array<Any>, mv)
+                addArrayParamByteCode(parameter.type.componentType, paramValue.jsonArray,
+                    list.get(index), mv)
             } else if (match.returnType.isAssignableFrom(List::class.java)) {
-                addListParamByteCode(parameter.type.componentType, configParams.get(index).jsonArray,
-                    list.get(index) as List<Any>, mv)
+                addListParamByteCode((match.genericReturnType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>,
+                    paramValue.jsonArray, list.get(index) as List<Any>, mv)
             } else {
-                addObjectParamByteCode(parameter.type, configParams.get(index).jsonObject, list.get(index), mv)
+                addObjectParamByteCode(parameter.type, paramValue.jsonObject, mv)
             }
         }
     }
 
-    private fun isBasicType(type: Class<*>) = type.isPrimitive or (type == String::class.java)
+    private fun isBasicType(type: Class<*>) = type.isPrimitive
 
-    private fun addBasicByteCode(type: Class<*>, value: Any?, mv: MethodVisitor) {
-        if (value == null) {
-            mv.visitInsn(ACONST_NULL)
-            return
-        }
-
+    private fun addBasicByteCode(type: Class<*>, value: Any, mv: MethodVisitor) {
         when (type) {
             Byte::class.javaPrimitiveType -> {
-                mv.visitIntInsn(SIPUSH, (value as Byte).toInt())
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Char")
+                mv.visitLdcInsn(value.toString().toByte())
             }
-            Char::class.javaPrimitiveType -> mv.visitIntInsn(SIPUSH, (value as Char).toInt())
+            Char::class.javaPrimitiveType -> {
+                mv.visitLdcInsn(value.toString().toCharArray()[0])
+            }
             Double::class.javaPrimitiveType -> {
-                mv.visitLdcInsn(value)
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Double")
+                mv.visitLdcInsn(value.toString().toDouble())
             }
             Float::class.javaPrimitiveType -> {
-                mv.visitLdcInsn(value)
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Float")
+                mv.visitLdcInsn(value.toString().toFloat())
             }
             Int::class.javaPrimitiveType -> {
-                mv.visitLdcInsn(value)
-                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+                mv.visitLdcInsn(value.toString().toInt())
             }
             Long::class.javaPrimitiveType -> {
-                mv.visitLdcInsn(value)
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Long")
+                mv.visitLdcInsn(value.toString().toLong())
             }
             Short::class.javaPrimitiveType -> {
-                mv.visitIntInsn(SIPUSH, (value as Short).toInt())
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Short")
+                mv.visitLdcInsn(value.toString().toShort())
             }
             Boolean::class.javaPrimitiveType -> {
-                mv.visitInsn(if (value as Boolean) ICONST_1 else ICONST_0)
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
-            }
-            String::class.java -> {
-                mv.visitLdcInsn(value)
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Ljava/lang/String;)Ljava/lang/Boolean;", false)
             }
             else -> mv.visitInsn(ACONST_NULL)
         }
     }
 
-    private fun addArrayParamByteCode(componentType: Class<*>, arrayParams: JsonArray, list: Array<Any>, mv: MethodVisitor) {
-        addListParamByteCode(componentType, arrayParams, list.toList(), mv)
-        mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "toArray", "()V", false)
-        varCounter++
-        val insVarSlot = varCounter
-        mv.visitVarInsn(ASTORE, insVarSlot)
-        mv.visitVarInsn(ALOAD, insVarSlot)
+    private fun addStringByteCode(value: String, mv: MethodVisitor) {
+        mv.visitLdcInsn(value)
+    }
+
+    private fun addArrayParamByteCode(componentType: Class<*>, arrayParams: JsonArray, list: Any?, mv: MethodVisitor) {
+        if (isPrimitiveBasicType(componentType)) {
+            val size = arrayParams.size
+            when(componentType.name) {
+                "int" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_INT)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(IASTORE)
+                    }
+                }
+                "short" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_SHORT)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(SASTORE)
+                    }
+                }
+                "boolean" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_BOOLEAN)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(BASTORE)
+                    }
+                }
+                "byte" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_BYTE)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(BASTORE)
+                    }
+                }
+                "char" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_CHAR)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(CASTORE)
+                    }
+                }
+                "float" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_FLOAT)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(FASTORE)
+                    }
+                }
+                "double" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_DOUBLE)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(DASTORE)
+                    }
+                }
+                "long" -> {
+                    mv.visitIntInsn(BIPUSH, size)
+                    mv.visitIntInsn(NEWARRAY, T_LONG)
+                    varCounter++
+                    mv.visitVarInsn(ASTORE, varCounter)
+                    mv.visitVarInsn(ALOAD, varCounter)
+                    for (index in 0 until size) {
+                        mv.visitVarInsn(ALOAD, varCounter)
+                        mv.visitIntInsn(BIPUSH, index)
+                        mv.visitIntInsn(BIPUSH, (arrayParams[index] as JsonLiteral).content.toInt())
+                        mv.visitInsn(LASTORE)
+                    }
+                }
+                else -> {
+                }
+            }
+        } else {
+            addListParamByteCode(componentType, arrayParams, (list as Array<Any>).toList(), mv)
+            mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "toArray", "()V", false)
+            varCounter++
+            val insVarSlot = varCounter
+            mv.visitVarInsn(ASTORE, insVarSlot)
+            mv.visitVarInsn(ALOAD, insVarSlot)
+        }
     }
 
     private fun addListParamByteCode(
@@ -170,18 +365,63 @@ abstract class TestCaseGenerator {
         varCounter++
         val insVarSlot = varCounter
         mv.visitVarInsn(ASTORE, insVarSlot)
+        val isBoxedType = isBoxedBasicType(componentType)
         listParams.forEachIndexed { index, it ->
             mv.visitVarInsn(ALOAD, insVarSlot)
-            addObjectParamByteCode(componentType, jsonArray[index].jsonObject, it, mv)
-            mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "add", "(Ljava/lang/Object)V", false)
+            if (isBoxedType) {
+                addBoxParamByteCode(componentType, jsonArray[index] as JsonLiteral, mv)
+            } else {
+                addObjectParamByteCode(componentType, jsonArray[index].jsonObject, mv)
+            }
+            mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "add", "(Ljava/lang/Object;)V", false)
         }
         mv.visitVarInsn(ALOAD, insVarSlot)
     }
 
-    fun addObjectParamByteCode(type: Class<*>, config: JsonObject, ins: Any?, mv: MethodVisitor) {
-        if(ins == null) {
-            return
+    private fun addBoxParamByteCode(type: Class<*>, value: JsonLiteral, mv: MethodVisitor) {
+        when (type.name) {
+            "java.lang.Byte" -> {
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Byte", "valueOf", "(Ljava/lang/String;)Ljava/lang/Byte;", false)
+            }
+            "java.lang.Double" -> {
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(Ljava/lang/String;)Ljava/lang/Double;", false)
+            }
+            "java.lang.Float" -> {
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "valueOf", "(Ljava/lang/String;)Ljava/lang/Float;", false)
+            }
+            "java.lang.Integer" -> {
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(Ljava/lang/String;)Ljava/lang/Integer;", false)
+            }
+            "java.lang.Long" -> {
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(Ljava/lang/String;)Ljava/lang/Long;", false)
+            }
+            "java.lang.Short" -> {
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Short", "valueOf", "(Ljava/lang/String;)Ljava/lang/Short;", false)
+            }
+            "java.lang.Boolean" -> {
+                mv.visitLdcInsn(value.toString())
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Ljava/lang/String;)Ljava/lang/Boolean;", false)
+            }
+            else -> mv.visitInsn(ACONST_NULL)
         }
+    }
+
+    private fun isBoxedBasicType(componentType: Class<*>): Boolean {
+        return componentBoxedTypes.contains(componentType.name)
+    }
+
+    private fun isPrimitiveBasicType(componentType: Class<*>): Boolean {
+        return componentPrimitiveTypes.contains(componentType.name)
+    }
+
+
+    fun addObjectParamByteCode(type: Class<*>, config: JsonObject, mv: MethodVisitor) {
         mv.visitTypeInsn(NEW, type.name.replace('.', '/'))
         mv.visitInsn(DUP)
         mv.visitMethodInsn(INVOKESPECIAL, type.name.replace('.', '/'), "<init>", "()V", false)
@@ -193,29 +433,25 @@ abstract class TestCaseGenerator {
             it.setAccessible(true)
             val paramName = it.name
             val ele = config[paramName]
-            if (isDefault(it.type, it.get(ins))) {
+            if (ele == null) {
                 return@forEach
             }
             val setMethodName = "set${paramName}"
             val setMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
-            if (ele != null && setMethod != null) {
-                mv.visitVarInsn(ALOAD, varCounter)
-                if (isBasicType(it.type)) {
-                    addBasicByteCode(it.type, it.get(ins), mv)
-                } else {
-                    addObjectParamByteCode(it.type, ele.jsonObject, it.get(ins), mv)
-                }
+            mv.visitVarInsn(ALOAD, oldCounter)
+            if (isBasicType(it.type)) {
+                addBasicByteCode(it.type, (ele as JsonLiteral).content, mv)
+            } else if (it.type == String::class.java) {
+                addStringByteCode((ele as JsonLiteral).content, mv)
+            } else {
+                addObjectParamByteCode(it.type, ele.jsonObject, mv)
+            }
+            if (setMethod != null) {
                 mv.visitMethodInsn(
                     INVOKEVIRTUAL, type.name.replace('.', '/'), setMethod.name,
                     processMethodDesc(setMethod), false
                 )
-            } else if (ele != null && (it.modifiers and ACC_PUBLIC != 0)) {
-                mv.visitVarInsn(ALOAD, varCounter)
-                if (isBasicType(it.type)) {
-                    addBasicByteCode(it.type, it.get(ins), mv)
-                } else {
-                    addObjectParamByteCode(it.type, ele.jsonObject, it.get(ins), mv)
-                }
+            } else {
                 mv.visitFieldInsn(PUTFIELD, type.name.replace('.', '/'), paramName, mapTypeToDesc(it.type))
             }
         }
@@ -223,94 +459,106 @@ abstract class TestCaseGenerator {
     }
 
     fun processVerifyByteCode(match: Method, mv: MethodVisitor, ret: Any?) {
-        varCounter++
-        mv.visitIntInsn(ISTORE, varCounter)
-        mv.visitVarInsn(ILOAD, varCounter)
         if (isBasicType(match.returnType)) {
-            verifyBasic(match.returnType, ret, mv)
+            verifyBasic(match.returnType, ret!!, mv)
+        } else if (ret == null) {
+            verifyNull(mv)
+        } else if (match.returnType == String::class.java) {
+            verifyString(ret as String, mv)
         } else if(match.returnType.isArray) {
-            veryfyArraySize(ret, mv)
+            veryfyArraySize((match.genericReturnType as Class<*>).componentType, ret, mv)
         } else if (match.returnType.isAssignableFrom(List::class.java)) {
             verifyListSize(ret, mv)
-
         } else {
             veryfyObject(match.returnType, mv, ret)
         }
     }
 
-    private fun verifyBasic(type: Class<*>, value: Any?, mv: MethodVisitor) {
+    private fun verifyNull(mv: MethodVisitor) {
+        mv.visitInsn(ACONST_NULL)
+        addVerifyByteCode(mv)
+    }
+
+    private fun verifyString(s: String, mv: MethodVisitor) {
+        mv.visitLdcInsn(s)
+        addVerifyByteCode(mv)
+    }
+
+    private fun verifyBasic(type: Class<*>, value: Any, mv: MethodVisitor) {
         addBasicByteCode(type, value, mv)
         addVerifyByteCode(mv)
     }
 
-    fun veryfyArraySize(ret: Any?, mv: MethodVisitor) {
-        if (ret != null) {
-            val count = (ret as Array<*>).size
-            mv.visitInsn(ARRAYLENGTH)
-            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
-            mv.visitIntInsn(BIPUSH, count)
-            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
-            addVerifyByteCode(mv)
+    fun veryfyArraySize(type: Class<*>, ret: Any, mv: MethodVisitor) {
+        val count = when(type.name) {
+            "int" -> {
+                (ret as IntArray).size
+            }
+            "short" -> {
+                (ret as ShortArray).size
+            }
+            "boolean" -> {
+                (ret as BooleanArray).size
+            }
+            "byte" -> {
+                (ret as ByteArray).size
+            }
+            "char" -> {
+                (ret as CharArray).size
+            }
+            "float" -> {
+                (ret as FloatArray).size
+            }
+            "double" -> {
+                (ret as DoubleArray).size
+            }
+            "long" -> {
+                (ret as LongArray).size
+            }
+            else -> {
+                (ret as Array<*>).size
+            }
         }
+        mv.visitInsn(ARRAYLENGTH)
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+        mv.visitIntInsn(BIPUSH, count)
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+        addVerifyByteCode(mv)
     }
 
     fun verifyListSize(ret: Any?, mv: MethodVisitor) {
-        if (ret != null) {
-            val count = (ret as List<*>).size
-            mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "size", "()I", true)
-            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
-            mv.visitIntInsn(BIPUSH, count)
-            mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
-            addVerifyByteCode(mv)
-        }
+        val count = (ret as List<*>).size
+        mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "size", "()I", true)
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+        mv.visitIntInsn(BIPUSH, count)
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+        addVerifyByteCode(mv)
     }
 
-    private fun veryfyObject(type: Class<*>, mv: MethodVisitor, ret: Any?) {
+    private fun veryfyObject(type: Class<*>, mv: MethodVisitor, ret: Any) {
+        val oldVarCounter = varCounter
         val methods = type.methods
-        if (ret == null) {
-            verifyBasic(type, ret, mv)
-        }
         type.declaredFields.forEach {
-            if (!isBasicType(it.type)) {
+            it.setAccessible(true)
+            if (!isBasicType(it.type) && it.type != String::class.java) {
                 return@forEach
             }
-            it.setAccessible(true)
             val name = it.name
             val setMethodName = "get${name}"
             val getMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
             val value = it.get(ret)
-            if (value != null && getMethod != null) {
-                mv.visitVarInsn(ALOAD, varCounter)
+            if (getMethod != null) {
+                mv.visitVarInsn(ALOAD, oldVarCounter)
                 mv.visitMethodInsn(
                     INVOKESPECIAL, type.name.replace('.', '/'), getMethod.name,
                     processMethodDesc(getMethod), false
                 )
-                verifyBasic(it.type, value, mv)
-            } else if (it.modifiers and ACC_PUBLIC != 0) {
-                mv.visitVarInsn(ALOAD, varCounter)
-                mv.visitFieldInsn(
-                    GETFIELD,
-                    type.name.replace('.', '/'),
-                    it.name,
-                    mapTypeToDesc(it.type)
-                )
-                verifyBasic(it.type, value, mv)
+                if (isBasicType(it.type)) {
+                    verifyBasic(it.type, value, mv)
+                } else {
+                    verifyString(value as String, mv)
+                }
             }
-
-        }
-    }
-
-    private fun isDefault(type: Class<*>?, value: Any?): Boolean {
-        return when (type) {
-            Byte::class.javaPrimitiveType -> value as Byte == 0.toByte()
-            Char::class.javaPrimitiveType -> value as Char == 0.toChar()
-            Double::class.javaPrimitiveType -> value as Double == 0.toDouble()
-            Float::class.javaPrimitiveType -> value as Float == 0.toFloat()
-            Int::class.javaPrimitiveType -> value as Int == 0
-            Long::class.javaPrimitiveType -> value as Long == 0.toLong()
-            Short::class.javaPrimitiveType -> value as Short == 0.toShort()
-            Boolean::class.javaPrimitiveType -> !(value as Boolean)
-            else -> value == null
         }
     }
 
@@ -363,20 +611,32 @@ abstract class TestCaseGenerator {
         )
     }
 
-    fun postProcessPrimitive(returnType: Class<*>, mv: MethodVisitor) {
+    fun postProcess(returnType: Class<*>, mv: MethodVisitor) {
+        varCounter++
         when (returnType) {
-            Byte::class.javaPrimitiveType -> mv.visitMethodInsn(
-                INVOKESTATIC,
-                "java/lang/Byte",
-                "valueOf",
-                "(I)Ljava/lang/Byte;",
-                false
-            )
-            Int::class.javaPrimitiveType -> mv.visitMethodInsn(
-                INVOKESTATIC, "java/lang/Integer", "valueOf",
-                "(I)Ljava/lang/Integer;", false
-            )
+            Boolean::class.javaPrimitiveType -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
+                mv.visitVarInsn(ISTORE, varCounter)
+                mv.visitVarInsn(ILOAD, varCounter)
+            }
+            Char::class.javaPrimitiveType -> {
+                mv.visitVarInsn(ISTORE, varCounter)
+                mv.visitVarInsn(ILOAD, varCounter)
+            }
+            Byte::class.javaPrimitiveType -> {
+                mv.visitVarInsn(ISTORE, varCounter)
+                mv.visitVarInsn(ILOAD, varCounter)
+                mv.visitMethodInsn(
+                    INVOKESTATIC,
+                    "java/lang/Byte",
+                    "valueOf",
+                    "(I)Ljava/lang/Byte;",
+                    false
+                )
+            }
             Short::class.javaPrimitiveType -> {
+                mv.visitVarInsn(ISTORE, varCounter)
+                mv.visitVarInsn(ILOAD, varCounter)
                 mv.visitMethodInsn(
                     INVOKESTATIC,
                     "java/lang/Short",
@@ -385,10 +645,30 @@ abstract class TestCaseGenerator {
                     false
                 )
             }
-            Boolean::class.javaPrimitiveType -> {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
+            Int::class.javaPrimitiveType -> {
+                mv.visitVarInsn(ISTORE, varCounter)
+                mv.visitVarInsn(ILOAD, varCounter)
+                mv.visitMethodInsn(
+                    INVOKESTATIC, "java/lang/Integer", "valueOf",
+                    "(I)Ljava/lang/Integer;", false
+                )
             }
-            else -> null
+            Float::class.javaPrimitiveType -> {
+                mv.visitVarInsn(FSTORE, varCounter)
+                mv.visitVarInsn(FLOAD, varCounter)
+            }
+            Double::class.javaPrimitiveType -> {
+                mv.visitVarInsn(DSTORE, varCounter)
+                mv.visitVarInsn(DLOAD, varCounter)
+            }
+            Long::class.javaPrimitiveType -> {
+                mv.visitVarInsn(LSTORE, varCounter)
+                mv.visitVarInsn(LLOAD, varCounter)
+            }
+            else -> {
+                mv.visitIntInsn(ASTORE, varCounter)
+                mv.visitVarInsn(ALOAD, varCounter)
+            }
         }
     }
 }

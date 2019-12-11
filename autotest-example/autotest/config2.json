@@ -1,0 +1,23 @@
+{
+  "classConfigs": [
+    {
+      "name": "com.tal.autotest.example.ListTestExample",
+      "methodConfigs": [
+        {
+          "name": "testArrayFilter",
+          "cases": [
+            {
+              "name": "case2",
+              "params": [
+                {
+                  "name": "p0",
+                  "value": [1,2,11,12]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

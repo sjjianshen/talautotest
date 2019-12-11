@@ -4,6 +4,7 @@ import com.tal.autotest.core.generateor.testcase.SpringBeanMethodTestCaseGenerat
 import com.tal.autotest.core.util.ClassConfig
 import com.tal.autotest.core.util.MethodConfig
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.springframework.test.context.TestContextManager
@@ -19,7 +20,7 @@ open class SpringMethodGenerator(
     override fun doGenerateMethodCode(
         method: Method,
         mv: MethodVisitor,
-        configParams: List<JsonElement>
+        configParams: List<JsonObject>
     ) {
         SpringBeanMethodTestCaseGenerator(
             mv,

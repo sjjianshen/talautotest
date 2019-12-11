@@ -4,6 +4,7 @@ import com.tal.autotest.core.generateor.testcase.NonStaticMethodTestCaseGenerato
 import com.tal.autotest.core.generateor.testcase.StaticMethodTestCaseGenerator
 import com.tal.autotest.core.util.MethodConfig
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -50,7 +51,7 @@ open class MethodGenerator(
    open fun doGenerateMethodCode(
         method: Method,
         mv: MethodVisitor,
-        configParams: List<JsonElement>
+        configParams: List<JsonObject>
     ) {
         if ((method.modifiers and Opcodes.ACC_STATIC) != 0) {
             StaticMethodTestCaseGenerator(

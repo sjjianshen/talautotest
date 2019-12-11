@@ -2,6 +2,7 @@ package com.tal.autotest.core.util
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class InputConfig(val classConfigs: List<ClassConfig>)
@@ -18,4 +19,4 @@ data class ClassConfig(
 data class MethodConfig(val name: String, val cases: List<Case>)
 
 @Serializable
-data class Case(val name: String, val params: List<JsonElement>)
+data class Case(val name: String, val params: List<JsonObject>)

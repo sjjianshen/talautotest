@@ -1,5 +1,6 @@
 package com.tal.autotest.core
 
+import com.tal.autotest.core.generateor.clz.SpringTestClassGenerator
 import com.tal.autotest.core.generateor.clz.TestClassGenerator
 import com.tal.autotest.core.util.AutotestContext
 import com.tal.autotest.core.util.FileSystemUtil
@@ -10,19 +11,19 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class AutotestGeneratorEngine(val autoTestContext: AutotestContext) {
-    val outputPath = autoTestContext.outputPath
-    val outputClassPath = autoTestContext.outputClassPath
-    val configPath = autoTestContext.ConfigFile
-    public fun launch() {
+class AutotestGeneratorEngine(private val autoTestContext: AutotestContext) {
+    private val outputPath = autoTestContext.outputPath
+    private val outputClassPath = autoTestContext.outputClassPath
+    private val configPath = autoTestContext.ConfigFile
+    fun launch() {
         if (!Files.exists(Paths.get(configPath))) {
-            System.out.println("没有发现配置文件")
+            println("没有发现配置文件")
             return
         }
         val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
         config.classConfigs.forEach {
             if (it.autowire) {
-
+                SpringTestClassGenerator(it, autoTestContext).generateTestClass()
             } else {
                 TestClassGenerator(it, autoTestContext).generateTestClass()
             }
@@ -30,7 +31,7 @@ class AutotestGeneratorEngine(val autoTestContext: AutotestContext) {
         decompileClass(outputPath, outputClassPath)
     }
 
-    fun decompileClass(outputPath : String, outputClassPath : String) {
+    private fun decompileClass(outputPath : String, outputClassPath : String) {
         FileSystemUtil.makeSureDirectoryExist(outputPath)
         ConsoleDecompiler.main(arrayOf(outputClassPath, outputPath))
     }
