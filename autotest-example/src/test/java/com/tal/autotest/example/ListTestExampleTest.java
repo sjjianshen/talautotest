@@ -1,5 +1,6 @@
 package com.tal.autotest.example;
 
+import java.util.ArrayList;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.Is;
 import org.junit.Test;
@@ -8,8 +9,14 @@ public class ListTestExampleTest {
    @Test
    public void case2() {
       ListTestExample var2 = new ListTestExample();
-      int[] var3 = new int[]{1, 2, 11, 12};
-      int[] var4 = var2.testArrayFilter(var3);
-      MatcherAssert.assertThat(var4.length, Is.is(Integer.valueOf(2)));
+      ArrayList var3 = new ArrayList();
+      Address var4 = new Address();
+      var4.setCountry("HB");
+      var3.add(var4);
+      Address var5 = new Address();
+      var5.setCountry("HN");
+      var3.add(var5);
+      int var6 = var2.addrList(var3);
+      MatcherAssert.assertThat(var6, Is.is(2));
    }
 }

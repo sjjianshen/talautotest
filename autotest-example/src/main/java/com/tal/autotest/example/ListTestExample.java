@@ -45,4 +45,8 @@ public class ListTestExample {
 
         return iarr;
     }
+
+    public int addrList(List<Address> addrs) {
+        return addrs.size();
+    }
 }

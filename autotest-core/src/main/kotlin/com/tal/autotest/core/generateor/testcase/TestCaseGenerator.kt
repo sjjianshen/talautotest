@@ -44,7 +44,7 @@ abstract class TestCaseGenerator {
                 list.add((given as JsonLiteral).content)
             } else if (it.type.isArray) {
                 list.add(if (given?.jsonArray != null) processArray(given.jsonArray, (it.parameterizedType as Class<*>).componentType) else null)
-            } else if (match.returnType.isAssignableFrom(List::class.java)) {
+            } else if (it.type.isAssignableFrom(List::class.java)) {
                 list.add(if (given?.jsonArray != null) processList(given.jsonArray, (it.parameterizedType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>) else null)
             } else {
                 list.add(processObject(given?.toString(), it.type))
@@ -154,7 +154,7 @@ abstract class TestCaseGenerator {
     ): MutableList<Any?> {
         var res = mutableListOf<Any?>()
         jsonArray.forEach {
-            res.add(processObject(it.content, type))
+            res.add(processObject(it.toString(), type))
         }
         return res
     }
@@ -186,9 +186,9 @@ abstract class TestCaseGenerator {
             } else if (parameter.type.isArray) {
                 addArrayParamByteCode(parameter.type.componentType, paramValue.jsonArray,
                     list.get(index), mv)
-            } else if (match.returnType.isAssignableFrom(List::class.java)) {
-                addListParamByteCode((match.genericReturnType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>,
-                    paramValue.jsonArray, list.get(index) as List<Any>, mv)
+            } else if (parameter.type.isAssignableFrom(List::class.java)) {
+                addListParamByteCode((parameter.parameterizedType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>,
+                    paramValue.jsonArray, mv)
             } else {
                 addObjectParamByteCode(parameter.type, paramValue.jsonObject, mv)
             }
@@ -344,7 +344,7 @@ abstract class TestCaseGenerator {
                 }
             }
         } else {
-            addListParamByteCode(componentType, arrayParams, (list as Array<Any>).toList(), mv)
+            addListParamByteCode(componentType, arrayParams, mv)
             mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "toArray", "()V", false)
             varCounter++
             val insVarSlot = varCounter
@@ -356,7 +356,6 @@ abstract class TestCaseGenerator {
     private fun addListParamByteCode(
         componentType: Class<*>,
         jsonArray: JsonArray,
-        listParams: List<Any>,
         mv: MethodVisitor
     ) {
         mv.visitTypeInsn(NEW, "java/util/ArrayList")
@@ -366,12 +365,12 @@ abstract class TestCaseGenerator {
         val insVarSlot = varCounter
         mv.visitVarInsn(ASTORE, insVarSlot)
         val isBoxedType = isBoxedBasicType(componentType)
-        listParams.forEachIndexed { index, it ->
+        jsonArray.forEach {
             mv.visitVarInsn(ALOAD, insVarSlot)
             if (isBoxedType) {
-                addBoxParamByteCode(componentType, jsonArray[index] as JsonLiteral, mv)
+                addBoxParamByteCode(componentType, it as JsonLiteral, mv)
             } else {
-                addObjectParamByteCode(componentType, jsonArray[index].jsonObject, mv)
+                addObjectParamByteCode(componentType, it.jsonObject, mv)
             }
             mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "add", "(Ljava/lang/Object;)V", false)
         }
