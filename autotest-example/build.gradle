@@ -6,35 +6,24 @@ plugins {
 apply plugin: 'maven'
 apply plugin: 'io.spring.dependency-management'
 
-group 'com.tal.autotest.plugin'
-version '1.1.001'
+version '1.2.001'
 
 repositories {
     mavenCentral()
+    mavenLocal()
     jcenter()
 }
 
 dependencies {
+    compile group: 'org.ow2.asm', name: 'asm-all', version: '5.2'
     compile 'org.springframework.boot:spring-boot-starter-data-mongodb'
     compile 'org.springframework.boot:spring-boot-starter-web'
     compile 'org.springframework.boot:spring-boot-starter-test'
     compileOnly 'org.projectlombok:lombok:1.18.8'
-    compile group: 'org.ow2.asm', name: 'asm-all', version: '5.2'
     compile group: 'junit', name: 'junit', version: '4.12'
+    compile 'com.tal.autotest:autotest-runtime:1.2.001'
 }
 
 targetCompatibility = "1.8"
 sourceCompatibility = "1.8"
 
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            repository (url: "file:///Users/jianshen/workspace/autotest/dist")
-            pom.project {
-                name = project.name
-                packaging = 'jar'
-                description = 'description'
-            }
-        }
-    }
-}

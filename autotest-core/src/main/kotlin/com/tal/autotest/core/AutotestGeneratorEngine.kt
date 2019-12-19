@@ -22,10 +22,14 @@ class AutotestGeneratorEngine(private val autoTestContext: AutotestContext) {
         }
         val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
         config.classConfigs.forEach {
-            if (it.autowire) {
-                SpringTestClassGenerator(it, autoTestContext).generateTestClass()
-            } else {
-                TestClassGenerator(it, autoTestContext).generateTestClass()
+            try {
+                if (it.autowire) {
+                    SpringTestClassGenerator(it, autoTestContext).generateTestClass()
+                } else {
+                    TestClassGenerator(it, autoTestContext).generateTestClass()
+                }
+            } catch (e : Exception) {
+                print(e.message)
             }
         }
         decompileClass(outputPath, outputClassPath)

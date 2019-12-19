@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+    id 'maven'
+}
+
+version '1.2.001'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'cglib', name: 'cglib', version: '3.2.4'
+    compile group: 'org.ow2.asm', name: 'asm-all', version: '5.2'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation('org.springframework.boot:spring-boot-starter-test:2.1.7.RELEASE')
+}
+
+jar {
+    manifest {
+        attributes 'Agent-Class': 'com.tal.autotest.runtime.instrument.InstrumentAgent',
+            'Can-Redefine-Classes': true,
+            'Can-Retransform-Classes': true,
+            'Premain-Class': 'com.tal.autotest.runtime.instrument.InstrumentAgent'
+    }
+}

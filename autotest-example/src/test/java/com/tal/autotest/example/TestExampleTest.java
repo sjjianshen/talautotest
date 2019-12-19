@@ -1,9 +1,12 @@
 package com.tal.autotest.example;
 
+import com.tal.autotest.runtime.AutotestRunner;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.Is;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(AutotestRunner.class)
 public class TestExampleTest {
    @Test
    public void case1() {
@@ -17,6 +20,7 @@ public class TestExampleTest {
       var4.setProvince("beijing");
       var3.setAddress(var4);
       String var5 = var2.test((boolean)var10001, '1', (short)2, 3, 4L, 5.0F, 6.0D, (byte)7, var3);
+      int i = var2.testInstrument(123);
       MatcherAssert.assertThat(var5, Is.is("1"));
    }
 

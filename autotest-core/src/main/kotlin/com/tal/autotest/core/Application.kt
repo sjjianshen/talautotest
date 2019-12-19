@@ -14,7 +14,12 @@ fun main(args: Array<String>) {
     val current = Thread.currentThread().contextClassLoader
     val targetClassLoader = DirectoryClassLoader(classpath, resourcePath, current)
     Thread.currentThread().contextClassLoader = targetClassLoader
-    AutotestGeneratorEngine(atc).launch()
-    Thread.currentThread().contextClassLoader = current
+    try {
+        AutotestGeneratorEngine(atc).launch()
+    } catch (e : Exception) {
+        System.exit(1)
+    } finally {
+        Thread.currentThread().contextClassLoader = current
+    }
     System.exit(0)
 }

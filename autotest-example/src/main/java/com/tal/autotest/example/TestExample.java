@@ -17,6 +17,10 @@ public class TestExample {
             return "2";
         }
 
+        if (RoundUtils.round(1.1) == 1) {
+            return "1";
+        }
+
         return "0";
     }
 
@@ -63,5 +67,12 @@ public class TestExample {
                 , l, f, d, bt
                 , u
         );
+    }
+
+    public int testInstrument(double input) {
+        if (RoundUtils.round(1.1) == 1) {
+            return 0;
+        }
+        return 1;
     }
 }
