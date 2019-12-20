@@ -23,7 +23,9 @@ public class MockMethodAdapterVisitor extends ClassVisitor {
         excludePrefix.add("com/sun");
         excludePrefix.add("com/intellij");
         excludePrefix.add("org/hamcrest");
+        excludePrefix.add("org/jetbrains");
         excludePrefix.add("net/sf");
+        excludePrefix.add("com/tal/autotest/runtime");
 
         excludeContains = new HashSet<>();
         excludeContains.add("EnhancerByCGLIB");
@@ -67,7 +69,7 @@ public class MockMethodAdapterVisitor extends ClassVisitor {
             Map<Integer, Integer> locationMap = new HashMap<>();
             boolean popCallee = opcode != INVOKESTATIC;
 
-            for (int index = 0; index < args.length; index++) {
+            for (int index = args.length - 1; index >= 0; index--) {
                 int loc = newLocal(args[index]);
                 storeLocal(loc, args[index]);
                 locationMap.put(index, loc);
@@ -85,7 +87,7 @@ public class MockMethodAdapterVisitor extends ClassVisitor {
             storeLocal(arrloc);
             for (int index = 0; index < args.length; index++) {
                 loadLocal(arrloc);
-                push(args.length - index - 1);
+                push(index);
                 int loc = locationMap.get(index);
                 loadLocal(loc, args[index]);
                 if (isPrimitiveType(args[index])) {
@@ -127,6 +129,8 @@ public class MockMethodAdapterVisitor extends ClassVisitor {
                     false);
             if (isPrimitiveType(returnType)) {
                 unbox(returnType);
+            } else {
+                checkCast(returnType);
             }
             storeLocal(retLoc);
             visitLabel(l1);

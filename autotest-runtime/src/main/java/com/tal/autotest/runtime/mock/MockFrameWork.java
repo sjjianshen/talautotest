@@ -31,7 +31,6 @@ public class MockFrameWork {
             mockCases = methodMocks.get(key);
         }
 
-//        IMockCase mockCase = new DefaultCase(result);
         mockCases.add(0, result);
     }
 
@@ -211,8 +210,9 @@ public class MockFrameWork {
     }
 
     public static Object getRegisteredMock(String name, String methodSig, Object[] args) {
-        if (mockCaches.containsKey(name)) {
-            Map<String, List<IMockCase>> methodMocks = mockCaches.get(name);
+        String slashedClassName = name.replace(".", "/");
+        if (mockCaches.containsKey(slashedClassName)) {
+            Map<String, List<IMockCase>> methodMocks = mockCaches.get(slashedClassName);
             if (methodMocks.containsKey(methodSig)) {
                 List<IMockCase> cases = methodMocks.get(methodSig);
                 for (IMockCase mockCase : cases) {
