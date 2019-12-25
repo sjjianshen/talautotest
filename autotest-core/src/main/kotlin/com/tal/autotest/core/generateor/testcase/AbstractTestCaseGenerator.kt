@@ -6,8 +6,9 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl
 import java.lang.reflect.Method
+import java.lang.reflect.Type
 
-abstract class TestCaseGenerator {
+abstract class AbstractTestCaseGenerator {
     internal var varCounter = 0
     val componentBoxedTypes = arrayListOf<String>()
     val componentPrimitiveTypes = arrayListOf<String>()
@@ -29,28 +30,44 @@ abstract class TestCaseGenerator {
         componentPrimitiveTypes.add("double")
     }
 
-    abstract fun generate()
+    fun generate() {
+        generateGiven()
+        val ret = probeRealResult()
+        generateWhen()
+        generateThen(ret)
+        afterGenerate()
+    }
 
     fun processParams(
         match: Method,
-        configParams: List<JsonElement>
+        configParams: List<JsonObject>
     ): ArrayList<Any?> {
         val list = ArrayList<Any?>()
         match.parameters.forEachIndexed { index, it ->
-            val given = configParams.get(index).jsonObject.get("value")
-            if (isBasicType(it.type)) {
-                list.add(processPrimitive(given, it.type))
-            } else if (it.type == String::class.java) {
-                list.add((given as JsonLiteral).content)
-            } else if (it.type.isArray) {
-                list.add(if (given?.jsonArray != null) processArray(given.jsonArray, (it.parameterizedType as Class<*>).componentType) else null)
-            } else if (it.type.isAssignableFrom(List::class.java)) {
-                list.add(if (given?.jsonArray != null) processList(given.jsonArray, (it.parameterizedType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>) else null)
-            } else {
-                list.add(processObject(given?.toString(), it.type))
-            }
+            val given = configParams[index]["value"]!!
+            val type = it.type
+            val componentType = it.parameterizedType
+            list.add(processParam(type, given, componentType))
         }
         return list
+    }
+
+    public fun processParam(
+        clz: Class<*>,
+        given: JsonElement,
+        type: Type
+    ): Any? {
+        if (isBasicType(clz)) {
+            return processPrimitive(given, clz)
+        } else if (clz == String::class.java) {
+            return (given as JsonLiteral).content
+        } else if (clz.isArray) {
+            return if (given.jsonArray != null) processArray(given.jsonArray, (type as Class<*>).componentType) else null
+        } else if (clz.isAssignableFrom(List::class.java)) {
+            return if (given.jsonArray != null) processList(given.jsonArray,(type as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>) else null
+        } else {
+            return processObject(given.toString(), clz)
+        }
     }
 
     private fun processPrimitive(
@@ -174,24 +191,35 @@ abstract class TestCaseGenerator {
     fun addParamsByteCode(
         match: Method,
         configParams: List<JsonObject>,
-        list: java.util.ArrayList<Any?>,
         mv: MethodVisitor
     ) {
         match.parameters.forEachIndexed { index, parameter ->
             val paramValue = configParams[index]["value"]!!
-            if (isBasicType(parameter.type)) {
-                addBasicByteCode(parameter.type, (paramValue as JsonLiteral).content, mv)
-            } else if (parameter.type == String::class.java) {
-                addStringByteCode((paramValue as JsonLiteral).content, mv)
-            } else if (parameter.type.isArray) {
-                addArrayParamByteCode(parameter.type.componentType, paramValue.jsonArray,
-                    list.get(index), mv)
-            } else if (parameter.type.isAssignableFrom(List::class.java)) {
-                addListParamByteCode((parameter.parameterizedType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>,
-                    paramValue.jsonArray, mv)
-            } else {
-                addObjectParamByteCode(parameter.type, paramValue.jsonObject, mv)
-            }
+            val type = parameter.type
+            val componentType = parameter.parameterizedType
+            addParamByteCode(type, paramValue, mv, componentType)
+        }
+    }
+
+    fun addParamByteCode(
+        clz: Class<*>,
+        paramValue: JsonElement,
+        mv: MethodVisitor,
+        type: Type
+    ) {
+        if (isBasicType(clz)) {
+            addBasicByteCode(clz, (paramValue as JsonLiteral).content, mv)
+        } else if (clz == String::class.java) {
+            addStringByteCode((paramValue as JsonLiteral).content, mv)
+        } else if (clz.isArray) {
+            addArrayParamByteCode(clz.componentType, paramValue.jsonArray, mv)
+        } else if (clz.isAssignableFrom(List::class.java)) {
+            addListParamByteCode(
+                (type as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>,
+                paramValue.jsonArray, mv
+            )
+        } else {
+            addObjectParamByteCode(clz, paramValue.jsonObject, mv)
         }
     }
 
@@ -232,7 +260,7 @@ abstract class TestCaseGenerator {
         mv.visitLdcInsn(value)
     }
 
-    private fun addArrayParamByteCode(componentType: Class<*>, arrayParams: JsonArray, list: Any?, mv: MethodVisitor) {
+    private fun addArrayParamByteCode(componentType: Class<*>, arrayParams: JsonArray, mv: MethodVisitor) {
         if (isPrimitiveBasicType(componentType)) {
             val size = arrayParams.size
             when(componentType.name) {
@@ -670,4 +698,16 @@ abstract class TestCaseGenerator {
             }
         }
     }
+
+    open fun afterGenerate() {
+    }
+
+    open fun generateGiven() {
+    }
+
+    abstract fun probeRealResult(): Any?
+
+    abstract fun generateWhen()
+
+    abstract fun generateThen(ret: Any?)
 }

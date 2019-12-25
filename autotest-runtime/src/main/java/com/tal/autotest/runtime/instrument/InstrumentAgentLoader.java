@@ -1,5 +1,7 @@
 package com.tal.autotest.runtime.instrument;
 
+import com.tal.autotest.runtime.mock.MockFrameWork;
+
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
@@ -54,9 +56,9 @@ public class InstrumentAgentLoader {
 
         Method loadAgent = clazz.getMethod("loadAgent", string, string);
         loadAgent.invoke(instance, jarFilePath, "");
-
         Method detach = clazz.getMethod("detach");
         detach.invoke(instance);
+        MockFrameWork.active();
     }
 
     private static String getJarPath() {

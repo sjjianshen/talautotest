@@ -1,20 +1,23 @@
 package com.tal.autotest.core.generateor.method
 
-import com.tal.autotest.core.generateor.testcase.NonStaticMethodTestCaseGenerator
-import com.tal.autotest.core.generateor.testcase.StaticMethodTestCaseGenerator
+import com.tal.autotest.core.generateor.testcase.DefaultMethodTestCaseGenerator
+import com.tal.autotest.core.util.Case
+import com.tal.autotest.core.util.ClassConfig
 import com.tal.autotest.core.util.MethodConfig
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
+import com.tal.autotest.core.util.MethodGeneratorContext
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import java.lang.reflect.Method
 
 open class MethodGenerator(
-    val mcf : MethodConfig,
-    val clz : Class<*>,
-    val cw : ClassVisitor
+    mtc: MethodGeneratorContext
 ) {
+    val mcf: MethodConfig = mtc.mcf
+    val clz: Class<*> = mtc.clz
+    val cw: ClassVisitor = mtc.cw
+    val ccf: ClassConfig = mtc.ccf
+
     fun generateTestCase() {
         val methods = clz.methods
         val methodName = mcf.name
@@ -40,7 +43,7 @@ open class MethodGenerator(
                 val av = mv.visitAnnotation("Lorg/junit/Test;", true)
                 av.visitEnd()
                 mv.visitCode()
-                doGenerateMethodCode(method, mv, configParams)
+                doGenerateMethodCode(method, mv, cacf)
                 mv.visitEnd()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -48,25 +51,16 @@ open class MethodGenerator(
         }
     }
 
-   open fun doGenerateMethodCode(
+    open fun doGenerateMethodCode(
         method: Method,
         mv: MethodVisitor,
-        configParams: List<JsonObject>
+        cacf: Case
     ) {
-        if ((method.modifiers and Opcodes.ACC_STATIC) != 0) {
-            StaticMethodTestCaseGenerator(
-                mv,
-                clz,
-                method,
-                configParams
-            ).generate()
-        } else {
-            NonStaticMethodTestCaseGenerator(
-                mv,
-                clz,
-                method,
-                configParams
-            ).generate()
-        }
+        DefaultMethodTestCaseGenerator(
+            mv,
+            clz,
+            method,
+            cacf
+        ).generate()
     }
 }

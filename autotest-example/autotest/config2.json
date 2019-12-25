@@ -1,19 +1,21 @@
 {
   "classConfigs": [
     {
-      "name": "com.tal.autotest.example.ListTestExample",
+      "name": "com.tal.autotest.example.TestInstrument",
+      "useMock": true,
       "methodConfigs": [
         {
-          "name": "addrList",
+          "name": "testAdd",
           "cases": [
             {
               "name": "case2",
-              "params": [
-                {
-                  "name": "p0",
-                  "value": [{"country": "HB"},{"country": "HN"}]
-                }
-              ]
+              "mock": [{
+                "className": "com.tal.autotest.example.util.ExampleUtil",
+                "methodName": "add",
+                "params": [{"value": "123"}, {"value":  1}],
+                "ret": {"value": "xxx"}
+              }],
+              "params": [{"value": "123"}, {"value":  1}]
             }
           ]
         }

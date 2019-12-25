@@ -43,15 +43,9 @@ dependencies {
     implementation('com.charleskorn.kaml:kaml:0.13.0')
     implementation('org.ow2.asm:asm-all:5.2')
     implementation('org.jboss.windup.decompiler:decompiler-fernflower:4.2.1.Final')
+    compile 'com.tal.autotest:autotest-runtime:1.2.003'
     implementation('org.springframework.boot:spring-boot-starter-test')
     implementation 'com.google.code.gson:gson:2.8.6'
-//    compile 'org.springframework.boot:spring-boot-starter-web'
-//    compile 'org.springframework.boot:spring-boot-starter-data-mongodb'
-//    compile 'org.springframework.boot:spring-boot-starter-data-redis'
-//    compile 'org.springframework.boot:spring-boot-starter-data-jpa'
-//    compile('com.google.code.gson:gson')
-//    compile group: 'junit', name: 'junit', version: '4.12'
-//    implementation 'org.projectlombok:lombok:1.18.8'
 }
 
 compileKotlin {

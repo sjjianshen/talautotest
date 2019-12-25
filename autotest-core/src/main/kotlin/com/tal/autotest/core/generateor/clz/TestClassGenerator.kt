@@ -4,6 +4,7 @@ import com.tal.autotest.core.generateor.method.MethodGenerator
 import com.tal.autotest.core.util.AutotestContext
 import com.tal.autotest.core.util.ClassConfig
 import com.tal.autotest.core.util.FileSystemUtil
+import com.tal.autotest.core.util.MethodGeneratorContext
 import org.objectweb.asm.*
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -24,6 +25,7 @@ open class TestClassGenerator(val ccf : ClassConfig, val ctx : AutotestContext) 
             }
             val cw = ClassWriter(0)
             cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC + Opcodes.ACC_SUPER, slashedClassName, null, "java/lang/Object", null)
+            afterClassInitialized(cw, clz)
             doGenerateTestClass(cw, clz)
             cw.visitEnd()
             val byteArray = cw.toByteArray()
@@ -31,9 +33,18 @@ open class TestClassGenerator(val ccf : ClassConfig, val ctx : AutotestContext) 
         }
     }
 
+    open fun afterClassInitialized(cw: ClassWriter, clz: Class<*>) {
+        if (ccf.useMock) {
+            var cav: AnnotationVisitor = cw.visitAnnotation("Lorg/junit/runner/RunWith;", true)
+            cav.visit("value", Type.getType("Lcom/tal/autotest/runtime/AutotestRunner;"))
+            cav.visitEnd()
+        }
+    }
+
     open fun doGenerateTestClass(cw: ClassWriter, clazz: Class<*>) {
         ccf.methodConfigs.forEach {
-            MethodGenerator(it, clazz, cw).generateTestCase()
+            val mtc = MethodGeneratorContext(ccf, it, cw, clazz)
+            MethodGenerator(mtc).generateTestCase()
         }
     }
 

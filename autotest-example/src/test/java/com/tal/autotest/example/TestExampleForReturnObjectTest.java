@@ -7,17 +7,17 @@ import org.junit.Test;
 public class TestExampleForReturnObjectTest {
    @Test
    public void case3() {
-      TestExampleForReturnObject var2 = new TestExampleForReturnObject();
-      User var3 = new User();
-      var3.setName("sj");
-      var3.setAge(30);
-      Address var4 = new Address();
-      var4.setCountry("CN");
-      var4.setProvince("beijing");
-      var3.setAddress(var4);
-      Address var5 = var2.test(var3);
-      MatcherAssert.assertThat(var5.getCountry(), Is.is("CN"));
-      MatcherAssert.assertThat(var5.getProvince(), Is.is("beijing"));
+      TestExampleForReturnObject var1 = new TestExampleForReturnObject();
+      User var2 = new User();
+      var2.setName("sj");
+      var2.setAge(30);
+      Address var3 = new Address();
+      var3.setCountry("CN");
+      var3.setProvince("beijing");
+      var2.setAddress(var3);
+      Address var4 = var1.test(var2);
+      MatcherAssert.assertThat(var4.getCountry(), Is.is("CN"));
+      MatcherAssert.assertThat(var4.getProvince(), Is.is("beijing"));
    }
 
    @Test
@@ -25,6 +25,7 @@ public class TestExampleForReturnObjectTest {
       User var1 = new User();
       var1.setName("sj");
       var1.setAge(30);
-      MatcherAssert.assertThat(TestExampleForReturnObject.staticTest(var1), Is.is((Object)null));
+      Address var2 = TestExampleForReturnObject.staticTest(var1);
+      MatcherAssert.assertThat(var2, Is.is((Object)null));
    }
 }

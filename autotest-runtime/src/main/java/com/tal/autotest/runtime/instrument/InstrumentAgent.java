@@ -1,7 +1,9 @@
 package com.tal.autotest.runtime.instrument;
 
+import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 
 public class InstrumentAgent {
     public static Instrumentation instrumentation;
@@ -19,5 +21,16 @@ public class InstrumentAgent {
     public static void agentmain(String args, Instrumentation inst) {
         instrumentation = inst;
         inst.addTransformer(transformer, false);
+    }
+
+    public static void reDefineClass(Class<?> clz, byte[] byteArray) {
+        if (instrumentation == null) {
+            return;
+        }
+        try {
+            instrumentation.redefineClasses(new ClassDefinition(clz, byteArray));
+        } catch (ClassNotFoundException | UnmodifiableClassException e) {
+            e.printStackTrace();
+        }
     }
 }

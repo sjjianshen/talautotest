@@ -18,14 +18,26 @@ public class MockMethodAdapterVisitor extends ClassVisitor {
     {
         excludePrefix = new HashSet<>();
         excludePrefix.add("java/");
-        excludePrefix.add("org/junit");
+        excludePrefix.add("javax/servlet");
         excludePrefix.add("sun/");
+        excludePrefix.add("net/sf");
+        excludePrefix.add("javassist");
+        excludePrefix.add("antlr");
         excludePrefix.add("com/sun");
+        excludePrefix.add("com/tal/autotest/runtime");
         excludePrefix.add("com/intellij");
+        excludePrefix.add("org/junit");
         excludePrefix.add("org/hamcrest");
         excludePrefix.add("org/jetbrains");
-        excludePrefix.add("net/sf");
-        excludePrefix.add("com/tal/autotest/runtime");
+        excludePrefix.add("org/hibernate");
+        excludePrefix.add("org/hsqldb");
+        excludePrefix.add("org/jboss");
+        excludePrefix.add("org/apache/commons/logging");
+        excludePrefix.add("org/dom4j");
+        excludePrefix.add("org/aopalliance");
+        excludePrefix.add("org/mockito");
+        excludePrefix.add("org/objenesis");
+        excludePrefix.add("org/apache");
 
         excludeContains = new HashSet<>();
         excludeContains.add("EnhancerByCGLIB");

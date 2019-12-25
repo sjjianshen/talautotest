@@ -4,6 +4,7 @@ import com.tal.autotest.core.context.AllInOneContextBootStraper
 import com.tal.autotest.core.generateor.method.SpringMethodGenerator
 import com.tal.autotest.core.util.AutotestContext
 import com.tal.autotest.core.util.ClassConfig
+import com.tal.autotest.core.util.MethodGeneratorContext
 import org.objectweb.asm.*
 import org.springframework.test.context.TestContextManager
 
@@ -22,15 +23,21 @@ class SpringTestClassGenerator(
         )
     }
 
+    override fun afterClassInitialized(cw: ClassWriter, clz: Class<*>) {
+        configAutowareClassIfNeeded(ccf, cw, clz.name)
+    }
 
     override fun doGenerateTestClass(cw: ClassWriter, clazz: Class<*>) {
         if (context == null) {
             System.out.println("Spring context initialized failed, skip test generate")
+            return
         }
-        configAutowareClassIfNeeded(ccf, cw, clazz.name)
+        context!!.beforeTestClass()
         ccf.methodConfigs.forEach {
-            SpringMethodGenerator(context!!, it, clazz, cw).generateTestCase()
+            val mtc = MethodGeneratorContext(ccf, it, cw, clazz)
+            SpringMethodGenerator(context!!, mtc).generateTestCase()
         }
+        context!!.afterTestClass()
     }
 
     private fun configAutowareClassIfNeeded(

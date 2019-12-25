@@ -1,6 +1,9 @@
 package com.tal.autotest.core.util
 
+import com.tal.autotest.runtime.instrument.AutotestClassTransformer
+import com.tal.autotest.runtime.instrument.InstrumentAgent
 import sun.misc.CompoundEnumeration
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.net.URL
@@ -78,15 +81,18 @@ class DirectoryClassLoader(
 
     private fun loadClassData(name: String): ByteArray {
         val slashedClassName = name.replace('.', '/')
-//        if (slashedClassName.contains("org/springframework/validation/beanvalidation/LocalValidatorFactoryBean")) {
-//            System.out.println("")
-//        }
         return File("$classpath/$slashedClassName.class").readBytes()
     }
 
 
-    public fun loadClassDirect(name: String, byteArray: ByteArray): Class<*> {
-        return defineClass(name, byteArray, 0, byteArray.size)
+    public fun redefineClass(clz: Class<*>) {
+        val ins = getResourceAsStream(clz.name.replace(".", "/")  + ".class")
+        if (ins != null) {
+            val buffer = ByteArrayOutputStream(maxOf(DEFAULT_BUFFER_SIZE, ins.available()))
+            ins.copyTo(buffer)
+            val byteArray = buffer.toByteArray()
+            InstrumentAgent.reDefineClass(clz, byteArray)
+        }
     }
 
     fun addAuxClassPath(path: String) {

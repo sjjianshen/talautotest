@@ -11,6 +11,7 @@ public class MockFrameWork {
     private static HashMap<Object, Class<?>> mockDict = new HashMap<>();
     private static CaseBuilder onGongingStubing = null;
     private static HashMap<String, Map<String, List<IMockCase>>> mockCaches = new HashMap<>();
+    private static boolean active = false;
 
     public static void registerMockCase(String className, String methodSig, IMockCase result) {
         String key = className;
@@ -53,6 +54,18 @@ public class MockFrameWork {
         if (!mockCaches.containsKey(slashClassName)) {
             mockCaches.put(slashClassName, new HashMap<>());
         }
+    }
+
+    public static void active() {
+        active = true;
+    }
+
+    public static void inActive() {
+        active = false;
+    }
+
+    public static boolean isActive() {
+        return active;
     }
 
     public static class CaseBuilder {
