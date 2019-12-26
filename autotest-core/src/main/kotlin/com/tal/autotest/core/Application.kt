@@ -8,9 +8,9 @@ fun main(args: Array<String>) {
     val classpath = args[1] // mvn: ${workspace}/target/classes, gradle: ${workspace}/build/classes/java/main
     val resourcePath = args[2] // mvn: ${workspace}/target/classes, gradle: ${workspace}/build/resources/main
     val outputPath = "${workspace}/src/test/java"
-    val configFile = "$workspace/autotest/config2.json"
+    val configPath = "$workspace/autotest"
     val outputClassPath = "$workspace/build/autotest/classes"
-    val atc = AutotestContext(workspace, configFile, outputPath, outputClassPath)
+    val atc = AutotestContext(workspace, configPath, outputPath, outputClassPath)
     val current = Thread.currentThread().contextClassLoader
     val targetClassLoader = DirectoryClassLoader(classpath, resourcePath, current)
     Thread.currentThread().contextClassLoader = targetClassLoader

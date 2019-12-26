@@ -16,26 +16,40 @@ import java.nio.file.Paths
 class AutotestGeneratorEngine(private val autoTestContext: AutotestContext) {
     private val outputPath = autoTestContext.outputPath
     private val outputClassPath = autoTestContext.outputClassPath
-    private val configPath = autoTestContext.ConfigFile
+    private val configPath = autoTestContext.configPath
     fun launch() {
         if (!Files.exists(Paths.get(configPath))) {
             println("没有发现配置文件")
             return
         }
-        val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
         InstrumentAgentLoader.initialize()
         InstrumentAgent.inActive()
-        config.classConfigs.forEach {
-            try {
-                if (it.autowire) {
-                    SpringTestClassGenerator(it, autoTestContext).generateTestClass()
+        Files.list(Paths.get(configPath))
+            .filter {
+                if (it.toString().endsWith(".json")) {
+                    System.out.println("Found config files: $it")
+                    return@filter true
                 } else {
-                    TestClassGenerator(it, autoTestContext).generateTestClass()
+                    System.out.println("Not valid config files: $it")
+                    return@filter false
                 }
-            } catch (e : Exception) {
-                print(e.message)
             }
-        }
+            .forEach {
+                System.out.println("Parsing config files: $it")
+                val config = Json.parse(InputConfig.serializer(), Files.newBufferedReader(it).readText())
+                config.classConfigs.forEach {
+                    try {
+                        if (it.autowire) {
+                            SpringTestClassGenerator(it, autoTestContext).generateTestClass()
+                        } else {
+                            TestClassGenerator(it, autoTestContext).generateTestClass()
+                        }
+                    } catch (e : Exception) {
+                        print(e.message)
+                    }
+                }
+            }
+
         decompileClass(outputPath, outputClassPath)
     }
 

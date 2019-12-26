@@ -18,5 +18,6 @@ public class ExampleListGeneratorTest {
       ExampleListGenerator var1 = new ExampleListGenerator();
       List var2 = var1.generate(2);
       MatcherAssert.assertThat(var2.size(), Is.is(Integer.valueOf(3)));
+      Object var3 = var2.get(0);
    }
 }
