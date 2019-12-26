@@ -2,6 +2,7 @@ package com.tal.autotest.core.generateor.testcase
 
 import com.tal.autotest.core.util.Case
 import com.tal.autotest.core.util.DirectoryClassLoader
+import com.tal.autotest.runtime.instrument.InstrumentAgent
 import com.tal.autotest.runtime.instrument.InstrumentAgentLoader
 import com.tal.autotest.runtime.mock.MockFrameWork
 import org.objectweb.asm.MethodVisitor
@@ -36,11 +37,24 @@ class DefaultMethodTestCaseGenerator(
                 varCounter++
                 mv.visitVarInsn(ASTORE, varCounter)
                 mv.visitVarInsn(ALOAD, varCounter)
-                addParamsByteCode(method, params, mv)
-                mv.visitMethodInsn(INVOKEVIRTUAL, className, methodName, Type.getMethodDescriptor(method), false)
-                mv.visitMethodInsn(INVOKESTATIC, "com/tal/autotest/runtime/mock/MockFrameWork", "when", "(Ljava/lang/Object;)Lcom/tal/autotest/runtime/mock/MockFrameWork\$CaseBuilder;", false)
-                addParamByteCode(method.returnType, ret, mv, method.genericReturnType)
-                mv.visitMethodInsn(INVOKEVIRTUAL, "com/tal/autotest/runtime/mock/MockFrameWork\$CaseBuilder", "thenReturn", "(Ljava/lang/Object;)V", false)
+                if (method.returnType.isPrimitive ||
+                    isBoxedBasicType(method.returnType) ||
+                    method.returnType == String.javaClass) {
+                    addParamsByteCode(method, params, mv)
+                    mv.visitMethodInsn(INVOKEVIRTUAL, className, methodName, Type.getMethodDescriptor(method), false)
+                    mv.visitMethodInsn(INVOKESTATIC, "com/tal/autotest/runtime/mock/MockFrameWork", "when", "(Ljava/lang/Object;)Lcom/tal/autotest/runtime/mock/MockFrameWork\$CaseBuilder;", false)
+                    addParamByteCode(method.returnType, ret, mv, method.genericReturnType)
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "com/tal/autotest/runtime/mock/MockFrameWork\$CaseBuilder", "thenReturn", "(Ljava/lang/Object;)V", false)
+                } else {
+                    val slot = addParamByteCode(method.returnType, ret, mv, method.genericReturnType)
+                    mv.visitVarInsn(ASTORE, slot)
+                    addParamsByteCode(method, params, mv)
+                    mv.visitMethodInsn(INVOKEVIRTUAL, className, methodName, Type.getMethodDescriptor(method), false)
+                    mv.visitMethodInsn(INVOKESTATIC, "com/tal/autotest/runtime/mock/MockFrameWork", "when", "(Ljava/lang/Object;)Lcom/tal/autotest/runtime/mock/MockFrameWork\$CaseBuilder;", false)
+                    mv.visitVarInsn(ALOAD, slot)
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "com/tal/autotest/runtime/mock/MockFrameWork\$CaseBuilder", "thenReturn", "(Ljava/lang/Object;)V", false)
+                }
+
                 val list = processParams(method, params)
                 val retObj = processParam(method.returnType, ret, method.genericReturnType)
                 val mockInstance = MockFrameWork.mock(clz)
@@ -71,12 +85,14 @@ class DefaultMethodTestCaseGenerator(
         val list = processParams(method, paramsConfig)
         var obj: Any? = null
         if (!cacf.mock.isEmpty()) {
-            InstrumentAgentLoader.initialize()
+            System.out.println("1")
             val loader = Thread.currentThread().contextClassLoader
             if (loader is DirectoryClassLoader) {
+                InstrumentAgent.active()
+                System.out.println("2")
                 (loader as DirectoryClassLoader).redefineClass(clz)
+                InstrumentAgent.inActive()
             }
-            MockFrameWork.inActive()
         }
         if (!isStaticMethod(method)) {
             obj = clz.newInstance()

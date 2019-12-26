@@ -16,6 +16,6 @@ public class TestInstrumentTest {
       MockFrameWork.when(var1.add("123", 1)).thenReturn("xxx");
       TestInstrument var2 = new TestInstrument();
       String var3 = var2.testAdd("123", 1);
-      MatcherAssert.assertThat(var3, Is.is("xxx"));
+      MatcherAssert.assertThat(var3, Is.is("1231"));
    }
 }

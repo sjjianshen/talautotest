@@ -7,7 +7,7 @@ import java.lang.instrument.UnmodifiableClassException;
 
 public class InstrumentAgent {
     public static Instrumentation instrumentation;
-    private static ClassFileTransformer transformer;
+    private static AutotestClassTransformer transformer;
 
     static {
         transformer = new AutotestClassTransformer();
@@ -32,5 +32,18 @@ public class InstrumentAgent {
         } catch (ClassNotFoundException | UnmodifiableClassException e) {
             e.printStackTrace();
         }
+    }
+
+
+    public static void active() {
+        transformer.active();
+    }
+
+    public static void inActive() {
+        transformer.inActive();
+    }
+
+    public static boolean isActive() {
+        return transformer.isActive();
     }
 }

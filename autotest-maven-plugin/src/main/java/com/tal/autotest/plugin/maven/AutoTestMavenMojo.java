@@ -45,6 +45,7 @@ public class AutoTestMavenMojo extends AbstractMojo {
             paths.add(sysPaths);
         }
         paths.add(project.getBasedir().getAbsolutePath() + "/target/classes");
+        paths.add(detectToolJar());
         String runtimePaths = String.join(File.pathSeparator, paths);
         cmd.add("-cp");
         cmd.add(runtimePaths);
@@ -80,6 +81,10 @@ public class AutoTestMavenMojo extends AbstractMojo {
             System.out.println("跳过该模块的生成");
         }
         System.out.println("生成完毕");
+    }
+
+    private String detectToolJar() {
+        return null;
     }
 
     private void handleOutput(Process process) {

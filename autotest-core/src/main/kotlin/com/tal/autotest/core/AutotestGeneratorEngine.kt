@@ -5,6 +5,8 @@ import com.tal.autotest.core.generateor.clz.TestClassGenerator
 import com.tal.autotest.core.util.AutotestContext
 import com.tal.autotest.core.util.FileSystemUtil
 import com.tal.autotest.core.util.InputConfig
+import com.tal.autotest.runtime.instrument.InstrumentAgent
+import com.tal.autotest.runtime.instrument.InstrumentAgentLoader
 import kotlinx.serialization.json.Json
 import org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler
 import java.io.File
@@ -21,6 +23,8 @@ class AutotestGeneratorEngine(private val autoTestContext: AutotestContext) {
             return
         }
         val config = Json.parse(InputConfig.serializer(), File(configPath).readText())
+        InstrumentAgentLoader.initialize()
+        InstrumentAgent.inActive()
         config.classConfigs.forEach {
             try {
                 if (it.autowire) {

@@ -8,6 +8,8 @@ import com.tal.autotest.core.util.MethodGeneratorContext
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
+import org.objectweb.asm.commons.GeneratorAdapter
 import java.lang.reflect.Method
 
 open class MethodGenerator(
@@ -39,7 +41,8 @@ open class MethodGenerator(
                     return@forEach
                 }
                 val method = matchMethods[0]
-                val mv = cw.visitMethod(Opcodes.ACC_PUBLIC, caseName, "()V", null, null)
+                var mv = cw.visitMethod(Opcodes.ACC_PUBLIC, caseName, "()V", null, null)
+                mv = GeneratorAdapter(mv, Opcodes.ACC_PUBLIC, methodName, Type.getMethodDescriptor(method))
                 val av = mv.visitAnnotation("Lorg/junit/Test;", true)
                 av.visitEnd()
                 mv.visitCode()

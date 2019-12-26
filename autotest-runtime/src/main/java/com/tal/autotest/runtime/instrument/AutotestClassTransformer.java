@@ -5,12 +5,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
-import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
 import java.util.Set;
@@ -19,11 +15,14 @@ import static org.objectweb.asm.ClassReader.EXPAND_FRAMES;
 
 public class AutotestClassTransformer implements ClassFileTransformer {
     private Set<String> classesInstrumented = new HashSet<>();
+    private boolean active = true;
 
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-        if (classesInstrumented.contains(className) ||
-                !MockFrameWork.isActive() ||
+        if (
+                !active||
+//                classesInstrumented.contains(className) ||
+                className.contains("com/tal/autotest")  ||
                 className.contains("$")
         ) {
             return classfileBuffer;
@@ -38,5 +37,17 @@ public class AutotestClassTransformer implements ClassFileTransformer {
         }
         classesInstrumented.add(className);
         return cw.toByteArray();
+    }
+
+    public void active() {
+        active = true;
+    }
+
+    public void inActive() {
+        active = false;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }

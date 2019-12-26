@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import kotlinx.serialization.json.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.commons.GeneratorAdapter
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl
 import java.lang.reflect.Method
 import java.lang.reflect.Type
@@ -206,26 +207,26 @@ abstract class AbstractTestCaseGenerator {
         paramValue: JsonElement,
         mv: MethodVisitor,
         type: Type
-    ) {
+    ): Int {
         if (isBasicType(clz)) {
-            addBasicByteCode(clz, (paramValue as JsonLiteral).content, mv)
+            return addBasicByteCode(clz, (paramValue as JsonLiteral).content, mv)
         } else if (clz == String::class.java) {
-            addStringByteCode((paramValue as JsonLiteral).content, mv)
+            return addStringByteCode((paramValue as JsonLiteral).content, mv)
         } else if (clz.isArray) {
-            addArrayParamByteCode(clz.componentType, paramValue.jsonArray, mv)
+            return addArrayParamByteCode(clz.componentType, paramValue.jsonArray, mv)
         } else if (clz.isAssignableFrom(List::class.java)) {
-            addListParamByteCode(
+            return addListParamByteCode(
                 (type as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>,
                 paramValue.jsonArray, mv
             )
         } else {
-            addObjectParamByteCode(clz, paramValue.jsonObject, mv)
+            return addObjectParamByteCode(clz, paramValue.jsonObject, mv)
         }
     }
 
     private fun isBasicType(type: Class<*>) = type.isPrimitive
 
-    private fun addBasicByteCode(type: Class<*>, value: Any, mv: MethodVisitor) {
+    private fun addBasicByteCode(type: Class<*>, value: Any, mv: MethodVisitor): Int {
         when (type) {
             Byte::class.javaPrimitiveType -> {
                 mv.visitLdcInsn(value.toString().toByte())
@@ -254,20 +255,23 @@ abstract class AbstractTestCaseGenerator {
             }
             else -> mv.visitInsn(ACONST_NULL)
         }
+        return -1
     }
 
-    private fun addStringByteCode(value: String, mv: MethodVisitor) {
+    private fun addStringByteCode(value: String, mv: MethodVisitor): Int {
         mv.visitLdcInsn(value)
+        return -1
     }
 
-    private fun addArrayParamByteCode(componentType: Class<*>, arrayParams: JsonArray, mv: MethodVisitor) {
+    private fun addArrayParamByteCode(componentType: Class<*>, arrayParams: JsonArray, mv: MethodVisitor): Int {
+        varCounter++
+        val arraySlot = varCounter
         if (isPrimitiveBasicType(componentType)) {
             val size = arrayParams.size
             when(componentType.name) {
                 "int" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_INT)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -280,7 +284,6 @@ abstract class AbstractTestCaseGenerator {
                 "short" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_SHORT)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -293,7 +296,6 @@ abstract class AbstractTestCaseGenerator {
                 "boolean" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_BOOLEAN)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -306,7 +308,6 @@ abstract class AbstractTestCaseGenerator {
                 "byte" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_BYTE)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -319,7 +320,6 @@ abstract class AbstractTestCaseGenerator {
                 "char" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_CHAR)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -332,7 +332,6 @@ abstract class AbstractTestCaseGenerator {
                 "float" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_FLOAT)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -345,7 +344,6 @@ abstract class AbstractTestCaseGenerator {
                 "double" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_DOUBLE)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -358,7 +356,6 @@ abstract class AbstractTestCaseGenerator {
                 "long" -> {
                     mv.visitIntInsn(BIPUSH, size)
                     mv.visitIntInsn(NEWARRAY, T_LONG)
-                    varCounter++
                     mv.visitVarInsn(ASTORE, varCounter)
                     mv.visitVarInsn(ALOAD, varCounter)
                     for (index in 0 until size) {
@@ -374,18 +371,18 @@ abstract class AbstractTestCaseGenerator {
         } else {
             addListParamByteCode(componentType, arrayParams, mv)
             mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "toArray", "()V", false)
-            varCounter++
             val insVarSlot = varCounter
             mv.visitVarInsn(ASTORE, insVarSlot)
             mv.visitVarInsn(ALOAD, insVarSlot)
         }
+        return arraySlot
     }
 
     private fun addListParamByteCode(
         componentType: Class<*>,
         jsonArray: JsonArray,
         mv: MethodVisitor
-    ) {
+    ): Int {
         mv.visitTypeInsn(NEW, "java/util/ArrayList")
         mv.visitInsn(DUP)
         mv.visitMethodInsn(INVOKESPECIAL, "java/util/ArrayList", "<init>", "()V", false)
@@ -397,12 +394,15 @@ abstract class AbstractTestCaseGenerator {
             mv.visitVarInsn(ALOAD, insVarSlot)
             if (isBoxedType) {
                 addBoxParamByteCode(componentType, it as JsonLiteral, mv)
+            } else if (componentType == String::class.java) {
+                addStringByteCode((it as JsonLiteral).content, mv)
             } else {
                 addObjectParamByteCode(componentType, it.jsonObject, mv)
             }
             mv.visitMethodInsn(INVOKESPECIAL, "java/util/List", "add", "(Ljava/lang/Object;)V", false)
         }
         mv.visitVarInsn(ALOAD, insVarSlot)
+        return insVarSlot
     }
 
     private fun addBoxParamByteCode(type: Class<*>, value: JsonLiteral, mv: MethodVisitor) {
@@ -435,11 +435,15 @@ abstract class AbstractTestCaseGenerator {
                 mv.visitLdcInsn(value.toString())
                 mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Ljava/lang/String;)Ljava/lang/Boolean;", false)
             }
-            else -> mv.visitInsn(ACONST_NULL)
+            else -> {
+                mv.visitInsn(ACONST_NULL)
+                return
+            }
         }
+//        (mv as GeneratorAdapter).box(org.objectweb.asm.Type.getType(type))
     }
 
-    private fun isBoxedBasicType(componentType: Class<*>): Boolean {
+    public fun isBoxedBasicType(componentType: Class<*>): Boolean {
         return componentBoxedTypes.contains(componentType.name)
     }
 
@@ -448,7 +452,7 @@ abstract class AbstractTestCaseGenerator {
     }
 
 
-    fun addObjectParamByteCode(type: Class<*>, config: JsonObject, mv: MethodVisitor) {
+    fun addObjectParamByteCode(type: Class<*>, config: JsonObject, mv: MethodVisitor): Int {
         mv.visitTypeInsn(NEW, type.name.replace('.', '/'))
         mv.visitInsn(DUP)
         mv.visitMethodInsn(INVOKESPECIAL, type.name.replace('.', '/'), "<init>", "()V", false)
@@ -470,6 +474,8 @@ abstract class AbstractTestCaseGenerator {
                 addBasicByteCode(it.type, (ele as JsonLiteral).content, mv)
             } else if (it.type == String::class.java) {
                 addStringByteCode((ele as JsonLiteral).content, mv)
+            } else if (isBoxedBasicType(it.type)) {
+                addBoxParamByteCode(it.type, ele as JsonLiteral, mv)
             } else {
                 addObjectParamByteCode(it.type, ele.jsonObject, mv)
             }
@@ -483,6 +489,7 @@ abstract class AbstractTestCaseGenerator {
             }
         }
         mv.visitVarInsn(ALOAD, oldCounter)
+        return oldCounter
     }
 
     fun processVerifyByteCode(match: Method, mv: MethodVisitor, ret: Any?) {
@@ -495,7 +502,7 @@ abstract class AbstractTestCaseGenerator {
         } else if(match.returnType.isArray) {
             veryfyArraySize((match.genericReturnType as Class<*>).componentType, ret, mv)
         } else if (match.returnType.isAssignableFrom(List::class.java)) {
-            verifyListSize(ret, mv)
+            verifyListSize(ret as List<*>, mv, (match.genericReturnType as ParameterizedTypeImpl).actualTypeArguments[0] as Class<*>)
         } else {
             veryfyObject(match.returnType, mv, ret)
         }
@@ -553,13 +560,27 @@ abstract class AbstractTestCaseGenerator {
         addVerifyByteCode(mv)
     }
 
-    fun verifyListSize(ret: Any?, mv: MethodVisitor) {
-        val count = (ret as List<*>).size
+    fun verifyListSize(
+        ret: List<*>,
+        mv: MethodVisitor,
+        type: Class<*>
+    ) {
+        val count = ret.size
+        val oldCounter = varCounter
         mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "size", "()I", true)
         mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
         mv.visitIntInsn(BIPUSH, count)
         mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
         addVerifyByteCode(mv)
+        if (ret.size > 0) {
+            mv.visitVarInsn(ALOAD, oldCounter)
+            mv.visitIntInsn(BIPUSH, 0)
+            mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "get", "(I)Ljava/lang/Object;", true)
+            varCounter++
+            mv.visitVarInsn(ASTORE, varCounter)
+            mv.visitVarInsn(ALOAD, varCounter)
+            veryfyObject(type, mv, ret[0]!!)
+        }
     }
 
     private fun veryfyObject(type: Class<*>, mv: MethodVisitor, ret: Any) {
@@ -574,6 +595,9 @@ abstract class AbstractTestCaseGenerator {
             val setMethodName = "get${name}"
             val getMethod: Method? = methods.find { it.name.equals(setMethodName, true) }
             val value = it.get(ret)
+            if (isDefault(it.type, value)) {
+                return@forEach
+            }
             if (getMethod != null) {
                 mv.visitVarInsn(ALOAD, oldVarCounter)
                 mv.visitMethodInsn(
@@ -586,6 +610,14 @@ abstract class AbstractTestCaseGenerator {
                     verifyString(value as String, mv)
                 }
             }
+        }
+    }
+
+    private fun isDefault(type: Class<*>, value: Any?): Boolean {
+        if (!type.isPrimitive) {
+            return value == null
+        } else {
+            return false
         }
     }
 
